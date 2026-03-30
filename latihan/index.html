@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kas Kelas</title>
+
+    <!-- Bootstrap biar cepat rapi -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+<body class="container mt-5">
+
+    <h2>Kas Kelas</h2>
+
+    <input type="text" id="namaMurid" class="form-control mb-2" placeholder="Nama Murid">
+    <button class="btn btn-primary" onclick="tambahMurid()">
+        Tambah Murid
+    </button>
+
+    <hr>
+
+    <h2>Tambah Transaksi</h2>
+
+    <!-- Pilih Murid -->
+    <select id="pilihMurid" class="form-control mb-2"></select>
+
+    <!-- Jenis -->
+    <select id="jenis" class="form-control mb-2">
+        <option value="masuk">Kas Masuk</option>
+        <option value="keluar">Kas Keluar</option>
+    </select>
+
+    <!-- Jumlah -->
+    <input type="number" id="jumlah" class="form-control mb-2" placeholder="Jumlah">
+
+    <button class="btn btn-success mb-3" onclick="tambahTransaksi()">
+        Tambah Transaksi
+    </button>
+
+    <ul id="listTransaksi" class="list-group"></ul>
+
+    <!-- List  -->
+    <ul id="listMurid" class="list-group"></ul>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
