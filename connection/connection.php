@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root";
 $password = "";
-$db_name = "db_kaskelas";
+$db_name = "db_kas";
 
 $conn = mysqli_connect($servername, $username, $password, $db_name);
 if (!$conn) {

@@ -1,3 +1,21 @@
+<?php
+session_start();
+include "config/database.php";
+
+// proteksi
+if (!isset($_SESSION['role'])) {
+    header("Location: login.php");
+    exit;
+}
+
+if ($_SESSION['role'] != 'bendahara') {
+    echo "Akses ditolak!";
+    exit;
+}
+
+$id_kelas = $_SESSION['id_kelas'];
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
