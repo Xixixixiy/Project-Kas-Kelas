@@ -1,3 +1,12 @@
+<?php
+session_start();
+
+if (!isset($_SESSION['id_user'])) {
+    header("Location: login.php");
+    exit;
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,7 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
 
-    // Bootstrap CSS
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
@@ -14,7 +23,7 @@
     <h2>Dashboard</h2>
 
     <p><strong>Role:</strong> <?= $_SESSION['role']; ?></p>
-    <p><strong>Kelas ID:</strong><?= $_SESSION['id_kelas']; ?></p>
+    <p><strong>Kelas ID:</strong> <?= $_SESSION['id_kelas']; ?></p>
 
     <a href="murid/data_murid.php" class="btn btn-primary">Data Murid</a>
     <a href="transaksi/data_transaksi.php" class="btn btn-success">Transaksi</a>
