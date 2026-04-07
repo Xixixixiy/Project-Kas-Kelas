@@ -17,16 +17,14 @@
 
             <form method="POST" action="function/proses_login.php">
                 <div class="mb-3">
-                    <input type="text" name="username" class="form-control" placeholder="Username / NISN" required>
+                    <input type="text" name="nisn_nip" class="form-control" placeholder="NISN / NIP" required>
                 </div>
 
                 <div class="mb-3">
                     <input type="password" name="password" class="form-control" placeholder="Password" required>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
-                    Login
-                </button>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
             </form>
         </div>
     </div>

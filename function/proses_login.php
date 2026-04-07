@@ -2,37 +2,29 @@
 session_start();
 include "../connection/connection.php";
 
-$username = mysqli_real_escape_string($conn, $_POST['username']);
+if (!isset($_POST['nisn_nip']) || !isset($_POST['password'])) {
+    echo "Data login tidak lengkap!";
+    exit;
+}
+
+$nisn_nip = $_POST['nisn_nip'];
 $password = $_POST['password'];
 
-$query = mysqli_query($conn, "SELECT * FROM user WHERE nisn_nip='$username'");
-$data = mysqli_fetch_assoc($query);
+// QUERY USER
+$query = mysqli_query($conn, "SELECT * FROM user WHERE nisn_nip='$nisn_nip' AND password='$password'");
 
-if ($data) {
+if (mysqli_num_rows($query) > 0) {
+    $data = mysqli_fetch_assoc($query);
 
-    if ($password == $data['password']) {
+    // SIMPAN SESSION
+    $_SESSION['id_user'] = $data['id_user'];
+    $_SESSION['nama']    = $data['nama'];
+    $_SESSION['role']    = $data['role'];
+    $_SESSION['id_kelas'] = $data['id_kelas'];
 
-        $_SESSION['id_user'] = $data['id_user'];
-        $_SESSION['nama'] = $data['nama'];
-        $_SESSION['role'] = $data['role'];
-        $_SESSION['id_kelas'] = $data['id_kelas'];
-
-        // redirect sesuai role
-        if ($data['role'] == 'bendahara') {
-            header("Location: ../dashboard_bendahara.php");
-        } elseif ($data['role'] == 'murid') {
-            header("Location: dashboard_murid.php");
-        } else {
-            header("Location: dashboard_admin.php");
-        }
-
-        exit;
-
-    } else {
-        echo "Password salah";
-    }
+    header("Location: ../dashboard_bendahara.php");
+    exit;
 
 } else {
-    echo "User tidak ditemukan";
+    echo "<script>alert('Login gagal!'); window.history.back();</script>";
 }
-?>

@@ -125,3 +125,95 @@
         </div>
   </body>
   </html>
+
+- REVISI DASHBOARD:
+  <div class="container mt-4">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0">Dashboard</h4>
+          <span class="text-muted">Periode: April 2026</span>
+      </div>
+
+      <div class="row">
+
+          <div class="col-md-4 mb-4">
+              <div class="card shadow-sm border-0 h-100"> <div class="card-body">
+                      <small class="text-muted">Pembayaran Kas</small>
+                      <h3 class="fw-bold mt-2">
+                          <?php echo $sudah_bayar; ?> / <?php echo $total_murid; ?>
+                      </h3>
+
+                      <?php
+                      $persen = $total_murid > 0 ? ($sudah_bayar / $total_murid) * 100 : 0;
+                      ?>
+
+                      <div class="progress mt-2" style="height: 8px;">
+                          <div class="progress-bar bg-success" style="width: <?php echo $persen; ?>%"></div>
+                      </div>
+
+                      <small class="text-muted">
+                          <?php echo round($persen); ?>% sudah bayar
+                      </small>
+                  </div>
+              </div>
+          </div>
+
+          <div class="col-md-8 mb-4">
+              <div class="card shadow-sm border-0 h-100">
+                  <div class="card-body">
+                      <small class="text-muted">Perbandingan Kas</small>
+                      <div style="height: 200px;">
+                          <canvas id="chartKeuangan"></canvas>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+      </div>
+
+      <div class="row g-3 mb-4">
+          </div>
+
+      ```
+
+### 3. Tambahkan Script Diagram
+
+Di bagian paling bawah (sebelum penutup `</body>`), tambahkan koding JavaScript untuk menggambar diagramnya menggunakan data dari PHP:
+
+```javascript
+<script>
+    // 1. Ambil elemen canvas tempat diagram akan digambar
+    const ctx = document.getElementById('chartKeuangan').getContext('2d');
+
+    // 2. Buat diagram baru
+    new Chart(ctx, {
+        type: 'bar', // Jenis diagram batang (bisa diganti 'pie' atau 'doughnut')
+        data: {
+            labels: ['Pemasukan', 'Pengeluaran'], // Label di bawah batang
+            datasets: [{
+                label: 'Jumlah Rupiah',
+                // Kita ambil data langsung dari variabel PHP yang sudah kamu hitung di atas
+                data: [<?php echo $pemasukan; ?>, <?php echo $pengeluaran; ?>],
+                backgroundColor: [
+                    'rgba(25, 135, 84, 0.2)', // Warna hijau untuk pemasukan
+                    'rgba(220, 53, 69, 0.2)'  // Warna merah untuk pengeluaran
+                ],
+                borderColor: [
+                    '#198754', // Border hijau
+                    '#dc3545'  // Border merah
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Agar diagram mengikuti ukuran kotak pembungkusnya
+            scales: {
+                y: {
+                    beginAtZero: true // Mulai angka dari 0
+                }
+            }
+        }
+    });
+</script>
+```
