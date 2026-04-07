@@ -1,18 +1,12 @@
 <?php
 session_start();
-include 'connection/koneksi.php';
 
 if (!isset($_SESSION['id_user'])) {
     header("Location: login.php");
     exit;
 }
-
-// Mengambil nama kelas dari database
-$id_kelas = $_SESSION['id_kelas'];
-
-$query = mysqli_query($conn, "SELECT nama_kelas FROM kelas WHERE id_kelas = '$id_kelas'");
-$data = mysqli_fetch_assoc($query);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -29,7 +23,7 @@ $data = mysqli_fetch_assoc($query);
     <h2>Dashboard</h2>
 
     <p><strong>Role:</strong> <?= $_SESSION['role']; ?></p>
-    <p><strong>Kelas:</strong> <?= $data['nama_kelas'] ?></p>
+    <p><strong>Kelas ID:</strong> <?= $_SESSION['id_kelas']; ?></p>
 
     <a href="murid/data_murid.php" class="btn btn-primary">Data Murid</a>
     <a href="transaksi/data_transaksi.php" class="btn btn-success">Transaksi</a>
