@@ -2,6 +2,8 @@
 session_start();
 include "../connection/connection.php";
 
+// --- VALIDASI AKSES ---
+// Cek apakah user sudah login dan perannya bendahara
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
     header("Location: ../login.php");
     exit;
@@ -9,18 +11,26 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
 
 $id_kelas = $_SESSION['id_kelas'];
 
-// ambil data murid
-$murid = mysqli_query($conn, "
-    SELECT * FROM murid WHERE id_kelas = '$id_kelas'
-");
+// --- AMBIL DATA MURID ---
+// Mengambil daftar siswa yang satu kelas dengan bendahara
+$murid = mysqli_query($conn, "SELECT * FROM murid WHERE id_kelas = '$id_kelas'");
 
-// Logika cek minggu yang sudah dibayar
+// --- LOGIKA PENGECEKAN MINGGU (FILTER) ---
+// Bagian ini jalan kalau kita sudah pilih Murid & Bulan (Halaman akan refresh)
 $sudah_bayar = [];
 $murid_terpilih = $_GET['id_murid'] ?? '';
 $bulan_terpilih = $_GET['bulan'] ?? '';
 
 if ($murid_terpilih && $bulan_terpilih) {
-    $cek_minggu = mysqli_query($conn, "SELECT minggu FROM transaksi WHERE id_murid = '$murid_terpilih' AND bulan = '$bulan_terpilih' AND jenis = 'Masuk'");
+    // Tanya database: "Si Andi di bulan April sudah bayar minggu mana saja?"
+    $cek_minggu = mysqli_query($conn, "
+        SELECT minggu FROM transaksi 
+        WHERE id_murid = '$murid_terpilih' 
+        AND bulan = '$bulan_terpilih' 
+        AND jenis = 'Masuk'
+    ");
+
+    // Simpan daftar minggu yang sudah dibayar ke dalam array (kantong data)
     while ($row = mysqli_fetch_assoc($cek_minggu)) {
         $sudah_bayar[] = $row['minggu'];
     }
@@ -39,55 +49,24 @@ if ($murid_terpilih && $bulan_terpilih) {
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg bg-white shadow-sm">
         <div class="container-fluid">
-
-            <a class="navbar-brand fw-bold text-primary" href="#">
-                Kas Kelas
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <a class="navbar-brand fw-bold text-primary" href="#">Kas Kelas</a>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-
                 <ul class="navbar-nav me-auto">
-
                     <li class="nav-item">
-                        <a class="nav-link" href="../dashboard_bendahara.php">
-                            Dashboard
-                        </a>
+                        <a class="nav-link" href="../dashboard_bendahara.php">Dashboard</a>
                     </li>
-
                     <li class="nav-item">
-                        <a class="nav-link active" href="kelolaKas/pemasukkan.php">
-                            Kelola Kas
-                        </a>
+                        <a class="nav-link active" href="kelolaKas/pemasukkan.php">Kelola Kas</a>
                     </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Status Kas
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            Detail Kas
-                        </a>
-                    </li>
-
+                    <li class="nav-item"><a class="nav-link" href="#">Status Kas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Detail Kas</a></li>
                 </ul>
 
                 <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted">
-                        <?php echo $_SESSION['nama']; ?>
-                    </span>
-
-                    <a href="logout.php" class="btn btn-outline-danger btn-sm">
-                        Logout
-                    </a>
+                    <span class="text-muted"><?php echo $_SESSION['nama']; ?></span>
+                    <a href="logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
                 </div>
-
             </div>
         </div>
     </nav>
@@ -111,12 +90,15 @@ if ($murid_terpilih && $bulan_terpilih) {
 
                 <div class="row">
                     <div class="col-md-6">
+
                         <div id="groupMurid" class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-mortarboard"></i> Pilih murid</label>
                             <select name="id_murid" id="selectMurid" class="form-select border-secondary-subtle">
                                 <option value="">-- Pilih Murid --</option>
                                 <?php while ($m = mysqli_fetch_assoc($murid)) { ?>
-                                    <option value="<?= $m['id_murid'] ?>" <?= ($murid_terpilih == $m['id_murid']) ? 'selected' : '' ?>><?= $m['nama'] ?></option>
+                                    <option value="<?= $m['id_murid'] ?>" <?= ($murid_terpilih == $m['id_murid']) ? 'selected' : '' ?>>
+                                        <?= $m['nama'] ?>
+                                    </option>
                                 <?php } ?>
                             </select>
                         </div>
@@ -141,7 +123,7 @@ if ($murid_terpilih && $bulan_terpilih) {
                                 <?php
                                 $m_list = ['M-1', 'M-2', 'M-3', 'M-4'];
                                 foreach ($m_list as $minggu_val) :
-                                    $is_paid = in_array($minggu_val, $sudah_bayar);
+                                    $is_paid = in_array($minggu_val, $sudah_bayar); // Cek apakah minggu ini ada di kantong data
                                 ?>
                                     <button type="button"
                                         class="btn <?= $is_paid ? 'btn-success text-white disabled' : 'btn-light border' ?> btn-minggu"
@@ -169,14 +151,14 @@ if ($murid_terpilih && $bulan_terpilih) {
                 </div>
 
                 <button type="submit" class="btn btn-success w-100 fw-bold mt-4 p-3" style="border-radius: 12px;">
-                    SIMPAN
+                    SIMPAN DATA
                 </button>
             </form>
         </div>
     </div>
 
     <script>
-        // 1. LOGIKA MINGGU BERANTAI
+        // --- 1. LOGIKA PILIH MINGGU ---
         const btnsMinggu = document.querySelectorAll('.btn-minggu');
         const inputMinggu = document.getElementById('inputMinggu');
 
@@ -184,6 +166,7 @@ if ($murid_terpilih && $bulan_terpilih) {
             btn.addEventListener('click', () => {
                 if (btn.disabled) return;
 
+                // Reset warna tombol yang tidak di-lock
                 btnsMinggu.forEach(b => {
                     if (!b.disabled) {
                         b.classList.remove('btn-success', 'text-white');
@@ -191,6 +174,7 @@ if ($murid_terpilih && $bulan_terpilih) {
                     }
                 });
 
+                // Efek Kinestetik: Klik minggu ke-3, maka 1 & 2 ikut menyala
                 for (let i = 0; i <= index; i++) {
                     btnsMinggu[i].classList.remove('btn-light');
                     btnsMinggu[i].classList.add('btn-success', 'text-white');
@@ -200,7 +184,7 @@ if ($murid_terpilih && $bulan_terpilih) {
             });
         });
 
-        // 2. LOGIKA PINDAH FORM (TOGGLE)
+        // --- 2. LOGIKA SWITCH MASUK/KELUAR ---
         const btnMasuk = document.getElementById('btnMasuk');
         const btnKeluar = document.getElementById('btnKeluar');
         const groupMurid = document.getElementById('groupMurid');
@@ -210,8 +194,8 @@ if ($murid_terpilih && $bulan_terpilih) {
         btnKeluar.addEventListener('click', () => {
             btnKeluar.className = 'btn btn-danger w-50 fw-bold';
             btnMasuk.className = 'btn btn-light w-50 fw-bold';
-            groupMurid.style.display = 'none';
-            groupWaktu.style.display = 'none';
+            groupMurid.style.display = 'none'; // Sembunyikan pilih murid
+            groupWaktu.style.display = 'none'; // Sembunyikan pilih minggu
             inputJenis.value = 'Keluar';
         });
 
@@ -223,9 +207,8 @@ if ($murid_terpilih && $bulan_terpilih) {
             inputJenis.value = 'Masuk';
         });
 
-        // Logika Pilih Bulan
+        // --- 3. LOGIKA REFRESH SAAT PILIH BULAN ---
         const btnsBulan = document.querySelectorAll('.btn-bulan');
-        const inputBulan = document.getElementById('inputBulan');
         const selectMurid = document.getElementById('selectMurid');
 
         btnsBulan.forEach(btn => {
@@ -234,7 +217,7 @@ if ($murid_terpilih && $bulan_terpilih) {
                 const selectedMurid = selectMurid.value;
 
                 if (selectedMurid) {
-                    // Refresh halaman untuk cek minggu yang sudah dibayar
+                    // Pindah halaman sambil bawa data ID Murid & Bulan agar PHP bisa cek status lunas
                     window.location.href = `pemasukkan.php?id_murid=${selectedMurid}&bulan=${selectedBulan}`;
                 } else {
                     alert("Pilih murid terlebih dahulu!");

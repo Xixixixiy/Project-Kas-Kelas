@@ -13,6 +13,7 @@ if ($_SESSION['role'] != 'bendahara') {
     exit;
 }
 
+// ambil id_kelas dari session
 $id_kelas = $_SESSION['id_kelas'];
 
 // hitung saldo, pemasukan, pengeluaran

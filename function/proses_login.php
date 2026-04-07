@@ -24,7 +24,6 @@ if (mysqli_num_rows($query) > 0) {
 
     header("Location: ../dashboard_bendahara.php");
     exit;
-
 } else {
     echo "<script>alert('Login gagal!'); window.history.back();</script>";
 }
