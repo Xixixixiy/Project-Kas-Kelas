@@ -109,13 +109,13 @@ $belum_bayar = $total_murid - $sudah_bayar;
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link" href="status_kas.php">
                             Status Kas
                         </a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link" href="detail_kas.php">
                             Detail Kas
                         </a>
                     </li>
@@ -143,7 +143,7 @@ $belum_bayar = $total_murid - $sudah_bayar;
 
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="fw-bold mb-0">Dashboard</h4>
-                <span class="text-muted">Periode: April 2026</span>
+                <span class="text-muted">Periode: Januari 2026</span>
             </div>
 
             <div class="row">
@@ -188,9 +188,9 @@ $belum_bayar = $total_murid - $sudah_bayar;
                 <div class="col-md-8 mb-4">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-body">
-                            <small class="text-muted">Perbandingan Kas</small>
-                            <div style="height: 200px;">
-                                <canvas id="chartKeuangan"></canvas>
+                            <h5>Perbandingan Kas</h5>
+                            <div class="d-flex justify-content-center align-items-center" style="position: relative; height: 250px;">
+                                <canvas id="perbandinganKasChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -235,7 +235,7 @@ $belum_bayar = $total_murid - $sudah_bayar;
             </div>
 
             <!-- Riwayat transaksi -->
-            <div class="card shadow-sm">
+            <div class="card shadow-sm mb-3">
                 <div class="card-header bg-white fw-semibold">
                     Riwayat Transaksi
                 </div>
@@ -272,9 +272,67 @@ $belum_bayar = $total_murid - $sudah_bayar;
 
         </div>
 
-        <!-- JS Bootstrap -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // 1. Ambil data dari PHP (Gunakan variabel yang sudah ada di atas)
+            // Kita kasih nilai default 0 jika variabel PHP-nya kosong
+            const dataMasuk = <?= $pemasukan ?? 0 ?>;
+            const dataKeluar = <?= $pengeluaran ?? 0 ?>;
+            const sisaSaldo = dataMasuk - dataKeluar;
 
+            // 2. Cek apakah ada data. Kalau 0 semua, kita kasih angka bayangan agar chart muncul
+            // Ini trik supaya pas presentasi chart-nya nggak hilang kalau datanya kosong
+            const chartData = (dataMasuk === 0 && dataKeluar === 0) ? [1, 0] : [sisaSaldo, dataKeluar];
+            const chartLabels = (dataMasuk === 0 && dataKeluar === 0) ? ['Belum ada data', 'Pengeluaran'] : ['Saldo Kas', 'Pengeluaran'];
+
+            // 3. Inisialisasi Chart
+            const ctx = document.getElementById('perbandinganKasChart').getContext('2d');
+
+            // Pastikan library Chart.js sudah ter-load
+            if (typeof Chart !== 'undefined') {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: [
+                                '#0d6efd', // Biru Primary
+                                '#dc3545' // Merah Danger
+                            ],
+                            hoverOffset: 4,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        let value = context.raw || 0;
+                                        return label + ': Rp ' + value.toLocaleString('id-ID');
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%' // Membuat lubang tengah lebih besar (lebih modern)
+                    }
+                });
+            } else {
+                console.error("Library Chart.js tidak ditemukan! Pastikan koneksi internet stabil.");
+            }
+        </script>
 </body>
 
 </html>

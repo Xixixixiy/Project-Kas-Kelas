@@ -22,7 +22,7 @@ $bulan      = $_POST['bulan'];
 $minggu     = $_POST['minggu'];
 $tanggal    = date('Y-m-d');
 
-// 🔥 AMBIL id_kelas DARI DATABASE (bukan dari form!)
+// AMBIL id_kelas DARI DATABASE
 $get = mysqli_query($conn, "SELECT id_kelas FROM murid WHERE id_murid = '$id_murid'");
 $data = mysqli_fetch_assoc($get);
 
