@@ -27,7 +27,7 @@ $query_lunas_kelas = mysqli_query($conn, "SELECT COUNT(*) as total_lunas FROM (
     SELECT id_murid FROM transaksi 
     WHERE bulan = '$bulan_aktif' AND jenis = 'Masuk' 
     GROUP BY id_murid HAVING COUNT(minggu) >= 4
-) as subquery");
+) as subquery"); 
 $total_lunas_kelas = mysqli_fetch_assoc($query_lunas_kelas)['total_lunas'];
 
 $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 : 0;

@@ -8,7 +8,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
     exit;
 }
 
-// --- 2. HITUNG SALDO (Untuk Validasi & Info) ---
+// --- LOGIKA HITUNG SALDO (CEK KEMAMPUAN BAYAR) ---
+// Sistem menghitung total uang yang ada sekarang agar tidak terjadi pengeluaran yang melebihi saldo
 $q_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE jenis='Masuk'");
 $q_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE jenis='Keluar'");
 
@@ -92,17 +93,18 @@ $saldo_saat_ini = $total_masuk - $total_keluar;
         </div>
     </div>
 
+    <!-- --- JAVASCRIPT VALIDATION (ALGORITMA PENCEGAHAN) --- -->
     <script>
         const inputJumlah = document.getElementById('inputJumlah');
         const btnSimpan = document.getElementById('btnSimpan');
-        const saldoSekarang = <?= $saldo_saat_ini ?>;
+        const saldoSekarang = <?= $saldo_saat_ini ?>; // Mengambil angka saldo dari PHP ke JS
 
-        // Validasi Saldo secara Real-time
         inputJumlah.addEventListener('input', function() {
             const nominal = parseInt(this.value);
 
+            // Algoritma: Jika nominal yang diketik > saldo, tombol simpan mati (disable)
             if (nominal > saldoSekarang) {
-                this.classList.add('is-invalid');
+                this.classList.add('is-invalid'); // Memberi warna merah pada input
                 btnSimpan.disabled = true;
                 btnSimpan.innerText = "SALDO TIDAK CUKUP";
             } else {
@@ -112,6 +114,8 @@ $saldo_saat_ini = $total_masuk - $total_keluar;
             }
         });
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

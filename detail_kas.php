@@ -18,11 +18,13 @@ $total_keluar = mysqli_fetch_assoc($q_keluar)['total'] ?? 0;
 $saldo_akhir = $total_masuk - $total_keluar;
 
 // --- 3. AMBIL SEMUA RIWAYAT TRANSAKSI ---
-// Kita JOIN dengan tabel murid untuk mendapatkan nama (khusus pemasukkan)
+// --- LOGIKA JOIN DATA ---
+// Mengambil data transaksi (t) dan mencocokkannya dengan data murid (m)
+// Menggunakan LEFT JOIN agar pengeluaran (yang id_muridnya kosong) tetap muncul
 $query_riwayat = mysqli_query($conn, "SELECT t.*, m.nama as nama_murid 
     FROM transaksi t 
     LEFT JOIN murid m ON t.id_murid = m.id_murid 
-    ORDER BY t.id_transaksi DESC"); // Data terbaru di atas
+    ORDER BY t.id_transaksi DESC"); // Order DESC agar data terbaru muncul paling atas (Kronologis)
 ?>
 
 <!DOCTYPE html>
