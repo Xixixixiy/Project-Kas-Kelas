@@ -88,9 +88,9 @@ $belum_bayar = $total_murid - $sudah_bayar;
                 Kas Kelas
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <!-- <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
-            </button>
+            </button> -->
 
             <div class="collapse navbar-collapse" id="navbarNav">
 
