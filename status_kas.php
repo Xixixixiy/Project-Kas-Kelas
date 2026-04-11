@@ -10,26 +10,24 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
 
 $id_kelas = $_SESSION['id_kelas'];
 
-// --- 2. LOGIKA FILTER BULAN ---
-$bulan_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-$bulan_aktif = $_GET['bulan'] ?? date('n') - 1; // Default bulan sekarang (index 0-11)
-$nama_bulan_aktif = is_numeric($bulan_aktif) ? $bulan_list[$bulan_aktif] : $bulan_aktif;
+// --- LOGIKA FILTER BULAN ---
+// Mengambil bulan dari URL atau default ke bulan berjalan
+$bulan_aktif = $_GET['bulan'] ?? date('F');
 
-// --- 3. AMBIL DATA MURID ---
-$query_murid = mysqli_query($conn, "SELECT id_murid, nama FROM murid WHERE id_kelas = '$id_kelas' ORDER BY nama ASC");
-
-// --- HITUNG TOTAL KELUNASAN KELAS ---
+// --- ALGORITMA KELUNASAN KELAS ---
+// 1. Hitung total murid di kelas tersebut
 $query_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total FROM murid WHERE id_kelas = '$id_kelas'");
 $total_murid = mysqli_fetch_assoc($query_total_murid)['total'];
 
-// Hitung berapa murid yang sudah lunas (bayar 4 minggu) di bulan aktif
+// 2. Hitung murid yang sudah bayar 4 kali (M-1 sampai M-4) di bulan tersebut
 $query_lunas_kelas = mysqli_query($conn, "SELECT COUNT(*) as total_lunas FROM (
     SELECT id_murid FROM transaksi 
     WHERE bulan = '$bulan_aktif' AND jenis = 'Masuk' 
     GROUP BY id_murid HAVING COUNT(minggu) >= 4
-) as subquery"); 
+) as subquery");
 $total_lunas_kelas = mysqli_fetch_assoc($query_lunas_kelas)['total_lunas'];
 
+// 3. Hitung persentase untuk indikator kemajuan (Progress Bar)
 $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 : 0;
 ?>
 
