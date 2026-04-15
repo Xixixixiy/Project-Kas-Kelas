@@ -22,7 +22,7 @@ if ($jumlah > $saldo) {
 // --- 3. QUERY SIMPAN ---
 // Perhatikan: Kita hanya mengisi kolom yang perlu saja. 
 // id_murid, bulan, dan minggu dibiarkan kosong karena ini pengeluaran kelas.
-$query = mysqli_query($conn, "INSERT INTO transaksi (jumlah, jenis, keterangan, tgl_transaksi) 
+$query = mysqli_query($conn, "INSERT INTO transaksi (jumlah, jenis, keterangan, tanggal) 
                               VALUES ('$jumlah', '$jenis', '$keterangan', '$tgl_today')");
 
 // --- 4. REDIRECT SETELAH BERHASIL ---

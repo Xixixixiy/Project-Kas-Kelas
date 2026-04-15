@@ -38,8 +38,8 @@ $saldo_saat_ini = $total_masuk - $total_keluar;
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="../dashboard_bendahara.php">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link active" href="pemasukkan.php">Kelola Kas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Status Kas</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Detail Kas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../status_kas.php">Status Kas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="../detail_kas.php">Detail Kas</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-muted"><?php echo $_SESSION['nama']; ?></span>

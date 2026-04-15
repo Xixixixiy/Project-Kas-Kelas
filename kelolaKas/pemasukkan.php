@@ -137,7 +137,8 @@ if ($murid_terpilih) {
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-cash"></i> Jumlah (Rp)</label>
-                            <input type="number" name="jumlah" class="form-control border-secondary-subtle" placeholder="Contoh: 5000" required>
+                            <input type="number" name="jumlah" id="inputJumlah" class="form-control bg-light border-secondary-subtle" placeholder="0" readonly required>
+                            <div class="form-text text-primary">*Otomatis Rp 5.000 per minggu</div>
                         </div>
                     </div>
 
@@ -188,6 +189,19 @@ if ($murid_terpilih) {
                         btnsMinggu[i].classList.add('btn-success', 'text-white');
                     }
                 }
+                
+                inputMinggu.value = btn.getAttribute('data-m');
+                // Ambil angka minggunya (misal M-3 jadi 3)
+                const mingguKe = index + 1;
+
+                // Hitung nominal: 5000 dikali jumlah minggu yang dipilih
+                // Tapi kita perlu tahu berapa minggu yang BARU akan dibayar
+                const sudahBayarCount = document.querySelectorAll('.btn-minggu.btn-success.disabled').length;
+                const jumlahMingguBaru = mingguKe - sudahBayarCount;
+
+                // Set nominal di input (misal bayar 3 minggu sekaligus = 15.000)
+                document.getElementById('inputJumlah').value = jumlahMingguBaru * 5000;
+
                 inputMinggu.value = btn.getAttribute('data-m');
             });
         });

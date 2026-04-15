@@ -29,6 +29,14 @@ $total_lunas_kelas = mysqli_fetch_assoc($query_lunas_kelas)['total_lunas'];
 
 // 3. Hitung persentase untuk indikator kemajuan (Progress Bar)
 $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 : 0;
+
+// --- AMBIL DAFTAR MURID ---
+// Kita butuh ini agar variabel $query_murid dikenali oleh 'while' di bawah
+$query_murid = mysqli_query($conn, "SELECT * FROM murid WHERE id_kelas = '$id_kelas' AND status = 'Aktif' ORDER BY nama ASC");
+
+// --- DEFINISI LIST BULAN (Untuk Form Dropdown) ---
+$bulan_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+$nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron
 ?>
 
 <!DOCTYPE html>
@@ -76,7 +84,7 @@ $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 :
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link" href="detail_kas.php">
                             Detail Kas
                         </a>
                     </li>
