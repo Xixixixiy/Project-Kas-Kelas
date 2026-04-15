@@ -3,6 +3,7 @@ session_start();
 include "../connection/connection.php";
 
 // --- 1. AMBIL DATA DARI FORM ---
+$id_kelas    = $_SESSION['id_kelas']; // Kita ambil dari session agar data terkunci pada kelas tersebut
 $jumlah      = $_POST['jumlah'];
 $keterangan  = $_POST['keterangan'];
 $jenis       = "Keluar"; // Sesuai input hidden atau set manual
@@ -22,8 +23,8 @@ if ($jumlah > $saldo) {
 // --- 3. QUERY SIMPAN ---
 // Perhatikan: Kita hanya mengisi kolom yang perlu saja. 
 // id_murid, bulan, dan minggu dibiarkan kosong karena ini pengeluaran kelas.
-$query = mysqli_query($conn, "INSERT INTO transaksi (jumlah, jenis, keterangan, tanggal) 
-                              VALUES ('$jumlah', '$jenis', '$keterangan', '$tgl_today')");
+$query = mysqli_query($conn, "INSERT INTO transaksi (id_kelas, jumlah, jenis, keterangan, tanggal) 
+                              VALUES ('$id_kelas', '$jumlah', '$jenis', '$keterangan', '$tgl_today')");
 
 // --- 4. REDIRECT SETELAH BERHASIL ---
 if ($query) {

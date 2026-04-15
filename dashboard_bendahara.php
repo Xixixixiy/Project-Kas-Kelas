@@ -13,30 +13,25 @@ if ($_SESSION['role'] != 'bendahara') {
     exit;
 }
 
-// ambil id_kelas dari session
+// ambil id_kela dari session
 $id_kelas = $_SESSION['id_kelas'];
 
-// hitung saldo, pemasukan, pengeluaran
-$query = mysqli_query($conn, "
-    SELECT 
-        SUM(CASE WHEN jenis='Masuk' THEN jumlah ELSE 0 END) as pemasukan,
-        SUM(CASE WHEN jenis='Keluar' THEN jumlah ELSE 0 END) as pengeluaran
-    FROM transaksi
-    WHERE id_kelas = '$id_kelas'
-");
+// 1. Hitung TOTAL PEMASUKAN kelas ini
+$query_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE id_kelas = '$id_kelas' AND jenis='Masuk'");
+$pemasukan = mysqli_fetch_assoc($query_masuk)['total'] ?? 0;
 
-$data = mysqli_fetch_assoc($query);
+// 2. Hitung TOTAL PENGELUARAN kelas ini (Berdasarkan ID KELAS, bukan ID Transaksi tunggal!)
+$query_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE id_kelas = '$id_kelas' AND jenis='Keluar'");
+$pengeluaran = mysqli_fetch_assoc($query_keluar)['total'] ?? 0;
 
-$pemasukan = $data['pemasukan'] ?? 0;
-$pengeluaran = $data['pengeluaran'] ?? 0;
+// 3. Saldo
 $saldo = $pemasukan - $pengeluaran;
 
-
-// ambil transaksi terbaru
+// 4. Ambil riwayat transaksi (Gunakan id_kelas supaya pengeluaran muncul di tabel)
 $transaksi = mysqli_query($conn, "
     SELECT * FROM transaksi 
     WHERE id_kelas = '$id_kelas'
-    ORDER BY tanggal DESC
+    ORDER BY tanggal DESC, id_transaksi DESC
     LIMIT 5
 ");
 
@@ -57,6 +52,8 @@ $q_bayar = mysqli_query($conn, "
 $sudah_bayar = mysqli_fetch_assoc($q_bayar)['sudah_bayar'];
 
 $belum_bayar = $total_murid - $sudah_bayar;
+
+// echo "Info Pengeluaran Terakhir: " . $pengeluaran; // Debugging: Tampilkan nilai pengeluaran terakhir
 ?>
 
 <!DOCTYPE html>

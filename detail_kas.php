@@ -10,21 +10,32 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
 
 $id_kelas = $_SESSION['id_kelas'];
 
-// --- 2. HITUNG TOTAL SALDO AKHIR ---
-$q_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE jenis='Masuk'");
-$q_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE jenis='Keluar'");
+// --- 2. LOGIKA FILTER BULAN & SALDO ---
+$filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'Semua';
+
+// Buat kondisi tambahan untuk SQL
+$kondisi_bulan = ($filter_bulan != 'Semua') ? " AND t.bulan = '$filter_bulan'" : "";
+
+// A. HITUNG TOTAL SALDO (Hanya untuk kelas ini dan bulan yang dipilih)
+$q_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi t WHERE t.id_kelas = '$id_kelas' AND t.jenis='Masuk' $kondisi_bulan");
+$q_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi t WHERE t.id_kelas = '$id_kelas' AND t.jenis='Keluar' $kondisi_bulan");
+
 $total_masuk = mysqli_fetch_assoc($q_masuk)['total'] ?? 0;
 $total_keluar = mysqli_fetch_assoc($q_keluar)['total'] ?? 0;
 $saldo_akhir = $total_masuk - $total_keluar;
 
-// --- 3. AMBIL SEMUA RIWAYAT TRANSAKSI ---
-// --- LOGIKA JOIN DATA ---
-// Mengambil data transaksi (t) dan mencocokkannya dengan data murid (m)
-// Menggunakan LEFT JOIN agar pengeluaran (yang id_muridnya kosong) tetap muncul
-$query_riwayat = mysqli_query($conn, "SELECT t.*, m.nama as nama_murid 
-    FROM transaksi t 
-    LEFT JOIN murid m ON t.id_murid = m.id_murid 
-    ORDER BY t.id_transaksi DESC"); // Order DESC agar data terbaru muncul paling atas (Kronologis)
+// B. AMBIL SEMUA RIWAYAT TRANSAKSI
+$sql = "SELECT t.*, m.nama as nama_murid 
+        FROM transaksi t 
+        LEFT JOIN murid m ON t.id_murid = m.id_murid 
+        WHERE t.id_kelas = '$id_kelas' 
+        $kondisi_bulan
+        ORDER BY t.id_transaksi DESC";
+
+$query_riwayat = mysqli_query($conn, $sql);
+
+// Untuk daftar bulan di combobox (opsional: bisa hardcode atau ambil dari DB)
+$list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 ?>
 
 <!DOCTYPE html>
@@ -63,6 +74,19 @@ $query_riwayat = mysqli_query($conn, "SELECT t.*, m.nama as nama_murid
             <div>
                 <h2 class="fw-bold mb-0">Detail Riwayat Kas</h2>
                 <p class="text-muted small">Daftar mutasi uang masuk dan keluar secara kronologis</p>
+
+                <div class="mb-3">
+                    <div class="">
+                        <form method="GET" action="">
+                            <select name="bulan" class="form-select shadow-sm border-0" onchange="this.form.submit()">
+                                <option value="Semua" <?= $filter_bulan == 'Semua' ? 'selected' : '' ?>>-- Semua Bulan --</option>
+                                <?php foreach ($list_bulan as $bln) : ?>
+                                    <option value="<?= $bln ?>" <?= $filter_bulan == $bln ? 'selected' : '' ?>><?= $bln ?></option>
+                                <?php endforeach; ?>
+                            </select>   
+                        </form>
+                    </div>
+                </div>
             </div>
             <div class="text-end">
                 <div class="p-3 bg-white shadow-sm rounded-4 border-start border-primary border-4">
