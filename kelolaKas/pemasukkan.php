@@ -35,6 +35,18 @@ if ($murid_terpilih) {
         $bulan_lunas[] = $row['bulan'];
     }
 }
+
+$cek_tahun = mysqli_query($conn, "SELECT tahun FROM transaksi WHERE id_murid = '$murid_terpilih' AND jenis = 'Masuk' GROUP BY tahun");
+$tahun_terpilih = [];
+while ($row = mysqli_fetch_assoc($cek_tahun)) {
+    $tahun_terpilih[] = $row['tahun'];
+}
+
+if ($murid_terpilih ) {
+    $tahun_terpilih[] = date('Y'); // Default ke tahun sekarang jika belum ada transaksi
+}
+
+echo "$tahun_terpilih[0]";
 ?>
 
 <!DOCTYPE html>
@@ -105,6 +117,20 @@ if ($murid_terpilih) {
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Pilih Tahun</label>
+                            <select name="tahun" class="form-select shadow-sm">
+                                <?php
+                                $thn_sekarang = date('Y');
+                                // Menampilkan tahun lalu dan tahun sekarang
+                                for ($i = $thn_sekarang - 1; $i <= $thn_sekarang; $i++) {
+                                    $selected = ($i == $thn_sekarang) ? 'selected' : '';
+                                    echo "<option value='$i' $selected>$i</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
                         <div id="groupWaktu" class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-calendar3"></i> Pilih Bulan</label>
                             <select name="bulan" id="selectBulan" class="form-select mb-3">
@@ -138,7 +164,7 @@ if ($murid_terpilih) {
                         <div class="mb-3">
                             <label class="form-label small fw-bold"><i class="bi bi-cash"></i> Jumlah (Rp)</label>
                             <input type="number" name="jumlah" id="inputJumlah" class="form-control bg-light border-secondary-subtle" placeholder="0" readonly required>
-                            <div class="form-text text-primary">*Otomatis Rp 5.000 per minggu</div>
+                            <div class="form-text text-primary">*Rp 5.000 per minggu</div>
                         </div>
                     </div>
 
@@ -189,7 +215,7 @@ if ($murid_terpilih) {
                         btnsMinggu[i].classList.add('btn-success', 'text-white');
                     }
                 }
-                
+
                 inputMinggu.value = btn.getAttribute('data-m');
                 // Ambil angka minggunya (misal M-3 jadi 3)
                 const mingguKe = index + 1;

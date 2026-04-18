@@ -9,6 +9,9 @@ $keterangan  = $_POST['keterangan'];
 $jenis       = "Keluar"; // Sesuai input hidden atau set manual
 $tgl_today   = date('Y-m-d'); // Mengambil tanggal hari ini otomatis
 
+$bulan_sekarang = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][(int)date('m') - 1]; // Ambil nama bulan dari array
+
 // --- 2. VALIDASI BACKEND (Opsional tapi penting) ---
 // Kita cek lagi saldonya di sini buat jaga-jaga kalau user "nakal" bypass Javascript
 $q_masuk  = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE jenis='Masuk'");
@@ -23,8 +26,8 @@ if ($jumlah > $saldo) {
 // --- 3. QUERY SIMPAN ---
 // Perhatikan: Kita hanya mengisi kolom yang perlu saja. 
 // id_murid, bulan, dan minggu dibiarkan kosong karena ini pengeluaran kelas.
-$query = mysqli_query($conn, "INSERT INTO transaksi (id_kelas, jumlah, jenis, keterangan, tanggal) 
-                              VALUES ('$id_kelas', '$jumlah', '$jenis', '$keterangan', '$tgl_today')");
+$query = mysqli_query($conn, "INSERT INTO transaksi (id_kelas, tanggal, jenis, jumlah, keterangan, bulan) 
+          VALUES ('$id_kelas', '$tgl_today', 'Keluar', '$jumlah', '$keterangan', '$bulan_sekarang')");
 
 // --- 4. REDIRECT SETELAH BERHASIL ---
 if ($query) {
