@@ -16,37 +16,45 @@ $murid = mysqli_query($conn, "SELECT * FROM murid WHERE id_kelas = '$id_kelas'")
 // --- 3. DATA FILTER DARI URL ---
 $murid_terpilih = $_GET['id_murid'] ?? '';
 $bulan_terpilih = $_GET['bulan'] ?? '';
+$tahun_terpilih = $_GET['tahun'] ?? date('Y'); // Tambahkan ambil tahun dari URL
 
-// --- 4. CEK STATUS MINGGU (Untuk Tombol M-1 s/d M-4) ---
+// --- 4. CEK STATUS MINGGU ---
 $sudah_bayar = [];
 if ($murid_terpilih && $bulan_terpilih) {
-    $cek_minggu = mysqli_query($conn, "SELECT minggu FROM transaksi WHERE id_murid = '$murid_terpilih' AND bulan = '$bulan_terpilih' AND jenis = 'Masuk'");
+    // Sekarang kita ambil dari kolom bulan & tahun di tabel transaksi
+    $cek_minggu = mysqli_query($conn, "SELECT minggu FROM transaksi WHERE id_murid = '$murid_terpilih' AND bulan = '$bulan_terpilih' AND tahun = '$tahun_terpilih'");
     while ($row = mysqli_fetch_assoc($cek_minggu)) {
         $sudah_bayar[] = $row['minggu'];
     }
 }
 
-// --- 5. CEK STATUS BULAN (Untuk Logika Kunci/Lock) ---
+// --- 5. CEK STATUS BULAN ---
 $bulan_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 $bulan_lunas = [];
+
 if ($murid_terpilih) {
-    $cek_lunas = mysqli_query($conn, "SELECT bulan FROM transaksi WHERE id_murid = '$murid_terpilih' AND jenis = 'Masuk' GROUP BY bulan HAVING COUNT(minggu) >= 4");
-    while ($row = mysqli_fetch_assoc($cek_lunas)) {
-        $bulan_lunas[] = $row['bulan'];
+    // Ambil tahun dari URL atau default tahun sekarang
+    $tahun_filter = $_GET['tahun'] ?? date('Y');
+
+    // Pastikan kolom 'tahun' dan 'minggu' sudah ada di tabel transaksi
+    $sql_cek_lunas = "SELECT bulan FROM transaksi 
+                      WHERE id_murid = '$murid_terpilih' 
+                      AND tahun = '$tahun_filter' 
+                      GROUP BY bulan 
+                      HAVING COUNT(minggu) >= 4";
+
+    $cek_lunas = mysqli_query($conn, $sql_cek_lunas);
+
+    // Cek apakah query berhasil
+    if ($cek_lunas) {
+        while ($row = mysqli_fetch_assoc($cek_lunas)) {
+            $bulan_lunas[] = $row['bulan'];
+        }
+    } else {
+        // Jika error, tampilkan pesan error SQL-nya untuk debug
+        echo "Error SQL: " . mysqli_error($conn);
     }
 }
-
-$cek_tahun = mysqli_query($conn, "SELECT tahun FROM transaksi WHERE id_murid = '$murid_terpilih' AND jenis = 'Masuk' GROUP BY tahun");
-$tahun_terpilih = [];
-while ($row = mysqli_fetch_assoc($cek_tahun)) {
-    $tahun_terpilih[] = $row['tahun'];
-}
-
-if ($murid_terpilih ) {
-    $tahun_terpilih[] = date('Y'); // Default ke tahun sekarang jika belum ada transaksi
-}
-
-echo "$tahun_terpilih[0]";
 ?>
 
 <!DOCTYPE html>
@@ -98,8 +106,10 @@ echo "$tahun_terpilih[0]";
         </div>
 
         <div class="card border-0 shadow-sm p-4" style="border-radius: 20px;">
+
             <form action="proses_tambah.php" method="POST">
-                <input type="hidden" name="jenis" id="inputJenis" value="Masuk">
+                <input type="hidden" name="id_kategori" value="1">
+                <input type="hidden" name="jenis" value="Masuk">
 
                 <div class="row">
                     <div class="col-md-6">
@@ -118,13 +128,14 @@ echo "$tahun_terpilih[0]";
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label small fw-bold">Pilih Tahun</label>
-                            <select name="tahun" class="form-select shadow-sm">
+                            <label class="form-label small fw-bold"><i class="bi bi-calendar-event"></i> Pilih Tahun</label>
+                            <select name="tahun" id="selectTahun" class="form-select shadow-sm">
                                 <?php
                                 $thn_sekarang = date('Y');
                                 // Menampilkan tahun lalu dan tahun sekarang
                                 for ($i = $thn_sekarang - 1; $i <= $thn_sekarang; $i++) {
-                                    $selected = ($i == $thn_sekarang) ? 'selected' : '';
+                                    // Gunakan $tahun_terpilih dari URL agar dropdown tidak reset ke 2026 terus
+                                    $selected = ($i == $tahun_terpilih) ? 'selected' : '';
                                     echo "<option value='$i' $selected>$i</option>";
                                 }
                                 ?>
@@ -178,26 +189,30 @@ echo "$tahun_terpilih[0]";
 
                 <button type="submit" class="btn btn-success w-100 fw-bold mt-4 p-3" style="border-radius: 12px;">SIMPAN DATA</button>
             </form>
+
         </div>
     </div>
 
     <script>
         const selectMurid = document.getElementById('selectMurid');
         const selectBulan = document.getElementById('selectBulan');
+        const selectTahun = document.getElementById('selectTahun'); // Ambil element tahun
         const btnsMinggu = document.querySelectorAll('.btn-minggu');
         const inputMinggu = document.getElementById('inputMinggu');
 
-        // Fungsi Refresh halaman agar data sinkron
         function updatePage() {
             const m = selectMurid.value;
             const b = selectBulan.value;
+            const t = selectTahun.value; // Tangkap tahun yang dipilih
             if (m) {
-                window.location.href = `pemasukkan.php?id_murid=${m}&bulan=${b}`;
+                // Refresh halaman dengan parameter lengkap
+                window.location.href = `pemasukkan.php?id_murid=${m}&bulan=${b}&tahun=${t}`;
             }
         }
 
         selectMurid.addEventListener('change', updatePage);
         selectBulan.addEventListener('change', updatePage);
+        selectTahun.addEventListener('change', updatePage); // Tambahkan listener tahun
 
         // Logika Klik Minggu
         btnsMinggu.forEach((btn, index) => {

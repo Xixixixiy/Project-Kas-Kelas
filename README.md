@@ -1,219 +1,173 @@
 ## Kode Backup
 
-- DASHBOARD BENDAHARA:
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Aplikasi Kas Kelas</title>
+<?php
+session_start();
+include "connection/connection.php";
 
-          <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-          <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-          <link rel="stylesheet" href="style/style.css">
+// --- 1. VALIDASI AKSES ---
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
+    header("Location: login.php");
+    exit;
+}
 
-    </head>
-    <body>
+$id_kelas = $_SESSION['id_kelas'];
+
+// --- 2. LOGIKA FILTER BULAN & SALDO ---
+$filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'Semua';
+
+// Buat kondisi tambahan untuk SQL
+$kondisi_bulan = ($filter_bulan != 'Semua') ? " AND t.bulan = '$filter_bulan'" : "";
+
+// A. HITUNG TOTAL SALDO (Hanya untuk kelas ini dan bulan yang dipilih)
+// Kita join ke tabel kategori (k) untuk mengecek k.jenis
+$q_masuk = mysqli_query($conn, "SELECT SUM(t.jumlah) as total 
+                                FROM transaksi t 
+                                JOIN kategori k ON t.id_kategori = k.id_kategori 
+                                WHERE t.id_kelas = '$id_kelas' 
+                                AND k.jenis = 'Masuk' $kondisi_bulan");
+
+$q_keluar = mysqli_query($conn, "SELECT SUM(t.jumlah) as total 
+                                 FROM transaksi t 
+                                 JOIN kategori k ON t.id_kategori = k.id_kategori 
+                                 WHERE t.id_kelas = '$id_kelas' 
+                                 AND k.jenis = 'Keluar' $kondisi_bulan");
+
+$total_masuk = mysqli_fetch_assoc($q_masuk)['total'] ?? 0;
+$total_keluar = mysqli_fetch_assoc($q_keluar)['total'] ?? 0;
+$saldo_akhir = $total_masuk - $total_keluar;
+
+// B. AMBIL SEMUA RIWAYAT TRANSAKSI
+$sql = "SELECT t.*, m.nama as nama_murid, k.nama_kategori, k.jenis 
+        FROM transaksi t 
+        LEFT JOIN murid m ON t.id_murid = m.id_murid 
+        JOIN kategori k ON t.id_kategori = k.id_kategori
+        WHERE t.id_kelas = '$id_kelas' 
+        $kondisi_bulan
+        ORDER BY t.tanggal DESC, t.id_transaksi DESC";
+
+$query_riwayat = mysqli_query($conn, $sql);
+
+// Untuk daftar bulan di combobox (opsional: bisa hardcode atau ambil dari DB)
+$list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+?>
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Detail Kas - Riwayat Transaksi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm">
         <div class="container-fluid">
-            <div class="d-flex">
-                <!-- SIDEBAR -->
-                <div class="bg-white border-end vh-100" style="width: 260px;">
-                    <div class="p-3 border-bottom mb-3">
-                        <h4 class="mb-0 text-primary fw-bold">Kas Kelas</h4>
-                        <small class="text-muted">XI PPLG 2</small>
-                    </div>
-                    <ul class="nav flex-column p-2">
-                        <li class="nav-item">
-                            <a class="nav-link active d-flex align-items-center gap-2 rounded bg-primary text-white"
-                                href="#">
-                                <i class="bi bi-grid-fill"></i>
-                                Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item mt-2">
-                            <a class="nav-link d-flex align-items-center gap-2 text-dark" href="./kelolaKas/pemasukkan.php">
-                                <i class="bi bi-wallet2"></i>
-                                Kelola Kas
-                            </a>
-                        </li>
-                        <li class="nav-item mt-2">
-                            <a class="nav-link d-flex align-items-center gap-2 text-dark" href="statusKas.html">
-                                <i class="bi bi-check-circle-fill"></i>
-                                Status Kas
-                            </a>
-                        </li>
-                        <li class="nav-item mt-2">
-                            <a class="nav-link d-flex align-items-center gap-2 text-dark" href="">
-                                <i class="bi bi-receipt"></i>
-                                Detail Kas
-                            </a>
-                        </li>
-                    </ul>
-                    <div class="position-absolute bottom-0 w-100 p-3">
-                        <a class="nav-link text-danger d-flex align-items-center gap-2" href="#">
-                            <i class="bi bi-box-arrow-left"></i>
-                            <h6 class="mb-0">Keluar</h6>
-                        </a>
-                    </div>
-                </div>
-                <div class="flex-grow-1 p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="fw-bold mb-0">Dashboard</h4>
-                        <span class="text-muted">Periode: April 2026</span>
-                    </div>
-                    <!-- Ringkasan kas -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <small class="text-muted">Saldo Kas</small>
-                                    <h4 class="fw-bold text-primary">Rp 1.250.000</h4>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <small class="text-muted">Pemasukan</small>
-                                    <h4 class="fw-bold text-success">Rp 500.000</h4>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card shadow-sm">
-                                <div class="card-body">
-                                    <small class="text-muted">Pengeluaran</small>
-                                    <h4 class="fw-bold text-danger">Rp 250.000</h4>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Riwayat transaksi -->
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-white fw-semibold">
-                            Riwayat Transaksi
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Tanggal</th>
-                                        <th>Keterangan</th>
-                                        <th>Jenis</th>
-                                        <th>Nominal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>03 Mei 2026</td>
-                                        <td>Kas April M-4</td>
-                                        <td><span class="badge bg-success">Masuk</span></td>
-                                        <td>Rp 50.000</td>
-                                    </tr>
-                                    <tr>
-                                        <td>02 Mei 2026</td>
-                                        <td>Beli ATK</td>
-                                        <td><span class="badge bg-danger">Keluar</span></td>
-                                        <td>Rp 75.000</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <a class="navbar-brand fw-bold text-primary" href="#">Kas Kelas</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="dashboard_bendahara.php">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="kelolaKas/pemasukkan.php">Kelola Kas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="status_kas.php">Status Kas</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="detail_kas.php">Detail Kas</a></li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted"><?php echo $_SESSION['nama']; ?></span>
+                    <a href="logout.php" class="btn btn-outline-danger btn-sm">Logout</a>
                 </div>
             </div>
         </div>
-  </body>
-  </html>
+    </nav>
 
-- REVISI DASHBOARD:
-  <div class="container mt-4">
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold mb-0">Detail Riwayat Kas</h2>
+                <p class="text-muted small">Daftar mutasi uang masuk dan keluar secara kronologis</p>
 
-      <div class="d-flex justify-content-between align-items-center mb-4">
-          <h4 class="fw-bold mb-0">Dashboard</h4>
-          <span class="text-muted">Periode: April 2026</span>
-      </div>
+                <div class="mb-3">
+                    <div class="">
+                        <form method="GET" action="">
+                            <select name="bulan" class="form-select shadow-sm border-0" onchange="this.form.submit()">
+                                <option value="Semua" <?= $filter_bulan == 'Semua' ? 'selected' : '' ?>>-- Semua Bulan --</option>
+                                <?php foreach ($list_bulan as $bln) : ?>
+                                    <option value="<?= $bln ?>" <?= $filter_bulan == $bln ? 'selected' : '' ?>><?= $bln ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="text-end">
+                <div class="p-3 bg-white shadow-sm rounded-4 border-start border-primary border-4">
+                    <span class="text-muted small d-block">Saldo Kas Terkini</span>
+                    <h3 class="fw-bold text-primary mb-0">Rp <?= number_format($saldo_akhir, 0, ',', '.') ?></h3>
+                </div>
+            </div>
+        </div>
 
-      <div class="row">
+        <div class="card border-0 shadow-sm" style="border-radius: 20px; overflow: hidden;">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-dark text-white">
+                        <tr>
+                            <th class="ps-4 py-3">Tanggal</th>
+                            <th class="py-3">Deskripsi</th>
+                            <th class="py-3">Kategori</th>
+                            <th class="py-3 text-end">Masuk (Rp)</th>
+                            <th class="py-3 text-end">Keluar (Rp)</th>
+                            <th class="py-3 pe-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($row = mysqli_fetch_assoc($query_riwayat)) : ?>
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="d-block fw-bold"><?= date('d M Y', strtotime($row['tanggal'])) ?></span>
+                                </td>
 
-          <div class="col-md-4 mb-4">
-              <div class="card shadow-sm border-0 h-100"> <div class="card-body">
-                      <small class="text-muted">Pembayaran Kas</small>
-                      <h3 class="fw-bold mt-2">
-                          <?php echo $sudah_bayar; ?> / <?php echo $total_murid; ?>
-                      </h3>
+                                <td>
+                                    <?php if ($row['jenis'] == 'Masuk') : ?>
+                                        <span class="fw-bold"><?= $row['nama_murid'] ?></span>
+                                        <small class="d-block text-muted">Bulan: <?= $row['bulan'] ?></small>
+                                    <?php else : ?>
+                                        <span class="fw-bold"><?= $row['keterangan'] ?></span>
+                                        <small class="d-block text-muted text-uppercase">Pengeluaran Umum</small>
+                                    <?php endif; ?>
+                                </td>
 
-                      <?php
-                      $persen = $total_murid > 0 ? ($sudah_bayar / $total_murid) * 100 : 0;
-                      ?>
+                                <td>
+                                    <span class="badge <?= $row['jenis'] == 'Masuk' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> px-2 py-1 mb-1 d-inline-block">
+                                        <?= $row['jenis'] == 'Masuk' ? 'Pemasukkan' : 'Pengeluaran' ?>
+                                    </span>
+                                    <span class="badge bg-primary-subtle text-primary px-2 py-1 d-inline-block">
+                                        <?= $row['nama_kategori'] ?>
+                                    </span>
+                                </td>
 
-                      <div class="progress mt-2" style="height: 8px;">
-                          <div class="progress-bar bg-success" style="width: <?php echo $persen; ?>%"></div>
-                      </div>
+                                <td class="text-end fw-bold text-success">
+                                    <?= $row['jenis'] == 'Masuk' ? '+ ' . number_format($row['jumlah'], 0, ',', '.') : '-' ?>
+                                </td>
 
-                      <small class="text-muted">
-                          <?php echo round($persen); ?>% sudah bayar
-                      </small>
-                  </div>
-              </div>
-          </div>
+                                <td class="text-end fw-bold text-danger">
+                                    <?= $row['jenis'] == 'Keluar' ? '- ' . number_format($row['jumlah'], 0, ',', '.') : '-' ?>
+                                </td>
 
-          <div class="col-md-8 mb-4">
-              <div class="card shadow-sm border-0 h-100">
-                  <div class="card-body">
-                      <small class="text-muted">Perbandingan Kas</small>
-                      <div style="height: 200px;">
-                          <canvas id="chartKeuangan"></canvas>
-                      </div>
-                  </div>
-              </div>
-          </div>
+                                <td class="text-center pe-4">
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm">
+                                        <i class="bi bi-printer text-primary"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
 
-      </div>
-
-      <div class="row g-3 mb-4">
-          </div>
-
-      ```
-
-### 3. Tambahkan Script Diagram
-
-Di bagian paling bawah (sebelum penutup `</body>`), tambahkan koding JavaScript untuk menggambar diagramnya menggunakan data dari PHP:
-
-```javascript
-<script>
-    // 1. Ambil elemen canvas tempat diagram akan digambar
-    const ctx = document.getElementById('chartKeuangan').getContext('2d');
-
-    // 2. Buat diagram baru
-    new Chart(ctx, {
-        type: 'bar', // Jenis diagram batang (bisa diganti 'pie' atau 'doughnut')
-        data: {
-            labels: ['Pemasukan', 'Pengeluaran'], // Label di bawah batang
-            datasets: [{
-                label: 'Jumlah Rupiah',
-                // Kita ambil data langsung dari variabel PHP yang sudah kamu hitung di atas
-                data: [<?php echo $pemasukan; ?>, <?php echo $pengeluaran; ?>],
-                backgroundColor: [
-                    'rgba(25, 135, 84, 0.2)', // Warna hijau untuk pemasukan
-                    'rgba(220, 53, 69, 0.2)'  // Warna merah untuk pengeluaran
-                ],
-                borderColor: [
-                    '#198754', // Border hijau
-                    '#dc3545'  // Border merah
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false, // Agar diagram mengikuti ukuran kotak pembungkusnya
-            scales: {
-                y: {
-                    beginAtZero: true // Mulai angka dari 0
-                }
-            }
-        }
-    });
-</script>
-```
+</html>

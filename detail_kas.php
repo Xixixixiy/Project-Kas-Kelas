@@ -17,20 +17,31 @@ $filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'Semua';
 $kondisi_bulan = ($filter_bulan != 'Semua') ? " AND t.bulan = '$filter_bulan'" : "";
 
 // A. HITUNG TOTAL SALDO (Hanya untuk kelas ini dan bulan yang dipilih)
-$q_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi t WHERE t.id_kelas = '$id_kelas' AND t.jenis='Masuk' $kondisi_bulan");
-$q_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi t WHERE t.id_kelas = '$id_kelas' AND t.jenis='Keluar' $kondisi_bulan");
+// Kita join ke tabel kategori (k) untuk mengecek k.jenis
+$q_masuk = mysqli_query($conn, "SELECT SUM(t.jumlah) as total 
+                                FROM transaksi t 
+                                JOIN kategori k ON t.id_kategori = k.id_kategori 
+                                WHERE t.id_kelas = '$id_kelas' 
+                                AND k.jenis = 'Masuk' $kondisi_bulan");
+
+$q_keluar = mysqli_query($conn, "SELECT SUM(t.jumlah) as total 
+                                 FROM transaksi t 
+                                 JOIN kategori k ON t.id_kategori = k.id_kategori 
+                                 WHERE t.id_kelas = '$id_kelas' 
+                                 AND k.jenis = 'Keluar' $kondisi_bulan");
 
 $total_masuk = mysqli_fetch_assoc($q_masuk)['total'] ?? 0;
 $total_keluar = mysqli_fetch_assoc($q_keluar)['total'] ?? 0;
 $saldo_akhir = $total_masuk - $total_keluar;
 
 // B. AMBIL SEMUA RIWAYAT TRANSAKSI
-$sql = "SELECT t.*, m.nama as nama_murid 
+$sql = "SELECT t.*, m.nama as nama_murid, k.nama_kategori, k.jenis 
         FROM transaksi t 
         LEFT JOIN murid m ON t.id_murid = m.id_murid 
+        JOIN kategori k ON t.id_kategori = k.id_kategori
         WHERE t.id_kelas = '$id_kelas' 
         $kondisi_bulan
-        ORDER BY t.id_transaksi DESC";
+        ORDER BY t.tanggal DESC, t.id_transaksi DESC";
 
 $query_riwayat = mysqli_query($conn, $sql);
 
@@ -83,7 +94,7 @@ $list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                                 <?php foreach ($list_bulan as $bln) : ?>
                                     <option value="<?= $bln ?>" <?= $filter_bulan == $bln ? 'selected' : '' ?>><?= $bln ?></option>
                                 <?php endforeach; ?>
-                            </select>   
+                            </select>
                         </form>
                     </div>
                 </div>
@@ -115,30 +126,38 @@ $list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', '
                                 <td class="ps-4">
                                     <span class="d-block fw-bold"><?= date('d M Y', strtotime($row['tanggal'])) ?></span>
                                 </td>
+
                                 <td>
                                     <?php if ($row['jenis'] == 'Masuk') : ?>
                                         <span class="fw-bold"><?= $row['nama_murid'] ?></span>
-                                        <small class="d-block text-muted">Iuran: <?= $row['bulan'] ?> (<?= $row['minggu'] ?>)</small>
+                                        <small class="d-block text-muted">Bulan: <?= $row['bulan'] ?></small>
                                     <?php else : ?>
                                         <span class="fw-bold"><?= $row['keterangan'] ?></span>
                                         <small class="d-block text-muted text-uppercase">Pengeluaran Umum</small>
                                     <?php endif; ?>
                                 </td>
+
                                 <td>
-                                    <?php if ($row['jenis'] == 'Masuk') : ?>
-                                        <span class="badge bg-success-subtle text-success px-3 py-2">Pemasukkan</span>
-                                    <?php else : ?>
-                                        <span class="badge bg-danger-subtle text-danger px-3 py-2">Pengeluaran</span>
-                                    <?php endif; ?>
+                                    <span class="badge <?= $row['jenis'] == 'Masuk' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> px-2 py-1 mb-1 d-inline-block">
+                                        <?= $row['jenis'] == 'Masuk' ? 'Pemasukkan' : 'Pengeluaran' ?>
+                                    </span>
+                                    <span class="badge bg-primary-subtle text-primary px-2 py-1 d-inline-block">
+                                        <?= $row['nama_kategori'] ?>
+                                    </span>
                                 </td>
+
                                 <td class="text-end fw-bold text-success">
                                     <?= $row['jenis'] == 'Masuk' ? '+ ' . number_format($row['jumlah'], 0, ',', '.') : '-' ?>
                                 </td>
+
                                 <td class="text-end fw-bold text-danger">
                                     <?= $row['jenis'] == 'Keluar' ? '- ' . number_format($row['jumlah'], 0, ',', '.') : '-' ?>
                                 </td>
+
                                 <td class="text-center pe-4">
-                                    <button class="btn btn-light btn-sm rounded-circle"><i class="bi bi-printer text-primary"></i></button>
+                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm">
+                                        <i class="bi bi-printer text-primary"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
