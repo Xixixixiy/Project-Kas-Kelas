@@ -1,59 +1,60 @@
 <?php
 session_start();
-include "connection/connection.php";
+include "config/database.php";
 
-// proteksi
-if (!isset($_SESSION['role'])) {
+// Proteksi
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Bendahara') {
     header("Location: login.php");
     exit;
 }
 
-if ($_SESSION['role'] != 'bendahara') {
-    echo "Akses ditolak!";
-    exit;
-}
-
-// ambil id_kela dari session
 $id_kelas = $_SESSION['id_kelas'];
 
-// 1. Hitung TOTAL PEMASUKAN kelas ini
-$query_masuk = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE id_kelas = '$id_kelas' AND jenis='Masuk'");
-$pemasukan = mysqli_fetch_assoc($query_masuk)['total'] ?? 0;
+// 1. Total Pemasukan & Pengeluaran (Sesuaikan 'nominal' atau 'jumlah' sesuai tabelmu)
+// Di sini saya asumsikan kolomnya bernama 'nominal' sesuai rencana database baru kita
+$query_pemasukan = mysqli_query($conn, "
+    SELECT SUM(t.nominal) as total 
+    FROM transaksi t
+    JOIN kategori k ON t.id_kategori = k.id_kategori
+    JOIN user u ON t.id_user = u.id_user
+    WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Masuk'
+");
+$pemasukan = ($query_pemasukan) ? mysqli_fetch_assoc($query_pemasukan)['total'] : 0;
 
-// 2. Hitung TOTAL PENGELUARAN kelas ini (Berdasarkan ID KELAS, bukan ID Transaksi tunggal!)
-$query_keluar = mysqli_query($conn, "SELECT SUM(jumlah) as total FROM transaksi WHERE id_kelas = '$id_kelas' AND jenis='Keluar'");
-$pengeluaran = mysqli_fetch_assoc($query_keluar)['total'] ?? 0;
+$query_pengeluaran = mysqli_query($conn, "
+    SELECT SUM(t.nominal) as total 
+    FROM transaksi t
+    JOIN kategori k ON t.id_kategori = k.id_kategori
+    JOIN user u ON t.id_user = u.id_user
+    WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Keluar'
+");
+$pengeluaran = ($query_pengeluaran) ? mysqli_fetch_assoc($query_pengeluaran)['total'] : 0;
 
-// 3. Saldo
 $saldo = $pemasukan - $pengeluaran;
 
-// 4. Ambil riwayat transaksi (Gunakan id_kelas supaya pengeluaran muncul di tabel)
+// 2. Statistik Murid
+$q_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total FROM user WHERE id_kelas = '$id_kelas' AND id_role = 1 AND status = 'Aktif'");
+$total_murid = ($q_total_murid) ? mysqli_fetch_assoc($q_total_murid)['total'] : 0;
+
+$q_sudah_bayar = mysqli_query($conn, "
+    SELECT COUNT(DISTINCT t.id_user) as total 
+    FROM transaksi t
+    JOIN user u ON t.id_user = u.id_user
+    WHERE u.id_kelas = '$id_kelas' AND u.id_role = 1
+");
+$sudah_bayar = ($q_sudah_bayar) ? mysqli_fetch_assoc($q_sudah_bayar)['total'] : 0;
+
+// 3. Riwayat Transaksi (Perbaikan baris 125)
 $transaksi = mysqli_query($conn, "
-    SELECT * FROM transaksi 
-    WHERE id_kelas = '$id_kelas'
-    ORDER BY tanggal DESC, id_transaksi DESC
+    SELECT t.*, k.nama_kategori, k.jenis, a.nama_lengkap 
+    FROM transaksi t
+    JOIN kategori k ON t.id_kategori = k.id_kategori
+    JOIN user u ON t.id_user = u.id_user
+    JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
+    WHERE u.id_kelas = '$id_kelas'
+    ORDER BY t.created_at DESC 
     LIMIT 5
 ");
-
-// total murid
-$q_murid = mysqli_query($conn, "
-    SELECT COUNT(*) as total FROM murid 
-    WHERE id_kelas = '$id_kelas'
-");
-$total_murid = mysqli_fetch_assoc($q_murid)['total'];
-
-
-// murid yang sudah bayar
-$q_bayar = mysqli_query($conn, "
-    SELECT COUNT(DISTINCT id_murid) as sudah_bayar
-    FROM transaksi
-    WHERE id_kelas = '$id_kelas' AND jenis='Masuk' AND id_murid IS NOT NULL
-");
-$sudah_bayar = mysqli_fetch_assoc($q_bayar)['sudah_bayar'];
-
-$belum_bayar = $total_murid - $sudah_bayar;
-
-// echo "Info Pengeluaran Terakhir: " . $pengeluaran; // Debugging: Tampilkan nilai pengeluaran terakhir
 ?>
 
 <!DOCTYPE html>
@@ -63,273 +64,112 @@ $belum_bayar = $total_murid - $sudah_bayar;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aplikasi Kas Kelas</title>
-
-    <!-- Bootstrap CSS dan Icon -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
-
-    <!-- Javascript untuk chart/diagram -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- CSS custom -->
     <link rel="stylesheet" href="style/style.css">
 </head>
 
 <body class="bg-light">
+    <?php include "layout/navbar.php"; ?>
 
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg bg-white shadow-sm">
-        <div class="container-fluid">
-
-            <a class="navbar-brand fw-bold text-primary" href="#">
-                Kas Kelas
-            </a>
-
-            <!-- <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button> -->
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-
-                <ul class="navbar-nav me-auto">
-
-                    <li class="nav-item">
-                        <a class="nav-link active" href="dashboard_bendahara.php">
-                            Dashboard
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="kelolaKas/pemasukkan.php">
-                            Kelola Kas
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="status_kas.php">
-                            Status Kas
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="detail_kas.php">
-                            Detail Kas
-                        </a>
-                    </li>
-
-                </ul>
-
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted">
-                        <?php echo $_SESSION['nama']; ?>
-                    </span>
-
-                    <a href="logout.php" class="btn btn-outline-danger btn-sm">
-                        Logout
-                    </a>
-                </div>
-
-            </div>
-        </div>
-    </nav>
-
-    <!-- CONTENT -->
     <div class="container mt-4">
-
-        <div class="container mt-4">
-
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="fw-bold mb-0">Dashboard</h4>
-                <span class="text-muted">Periode: Januari 2026</span>
-            </div>
-
-            <div class="row">
-
-                <div class="col-md-4 mb-4">
-                    <div class="card shadow-sm border-0 h-100">
-
-                        <div class="card-body d-flex flex-column justify-content-center text-center">
-
-                            <small class="text-muted text-uppercase fw-semibold" style="letter-spacing: 1px;">
-                                Pembayaran Kas
-                            </small>
-
-                            <h1 class="fw-bold mt-3 mb-1 text-primary">
-                                <?php echo $sudah_bayar; ?> <span class="text-muted fs-4">/ <?php echo $total_murid; ?></span>
-                            </h1>
-
-                            <?php
-                            // Hitung persentase untuk progress bar [cite: 5, 53]
-                            $persen = $total_murid > 0 ? ($sudah_bayar / $total_murid) * 100 : 0;
-                            ?>
-
-                            <div class="px-4 mt-3">
-                                <div class="progress" style="height: 10px; border-radius: 10px;">
-                                    <div class="progress-bar bg-success shadow-sm"
-                                        role="progressbar"
-                                        style="width: <?php echo $persen; ?>%"
-                                        aria-valuenow="<?php echo $persen; ?>"
-                                        aria-valuemin="0"
-                                        aria-valuemax="100">
-                                    </div>
-                                </div>
-                                <small class="text-muted d-block mt-2">
-                                    <strong><?php echo round($persen); ?>%</strong> murid sudah lunas
-                                </small>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-8 mb-4">
-                    <div class="card shadow-sm border-0 h-100">
-                        <div class="card-body">
-                            <h5>Perbandingan Kas</h5>
-                            <div class="d-flex justify-content-center align-items-center" style="position: relative; height: 250px;">
-                                <canvas id="perbandinganKasChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Ringkasan kas -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <small class="text-muted">Saldo Kas</small>
-                            <h4 class="fw-bold text-primary">
-                                Rp <?php echo number_format($saldo, 0, ',', '.'); ?>
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <small class="text-muted">Pemasukan</small>
-                            <h4 class="fw-bold text-success">
-                                Rp <?php echo number_format($pemasukan, 0, ',', '.'); ?>
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <small class="text-muted">Pengeluaran</small>
-                            <h4 class="fw-bold text-danger">
-                                Rp <?php echo number_format($pengeluaran, 0, ',', '.'); ?>
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Riwayat transaksi -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-white fw-semibold">
-                    Riwayat Transaksi
-                </div>
-
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Keterangan</th>
-                                <th>Jenis</th>
-                                <th>Nominal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($row = mysqli_fetch_assoc($transaksi)) { ?>
-                                <tr>
-                                    <td><?php echo $row['tanggal']; ?></td>
-                                    <td><?php echo $row['keterangan']; ?></td>
-                                    <td>
-                                        <?php if ($row['jenis'] == 'Masuk') { ?>
-                                            <span class="badge bg-success">Masuk</span>
-                                        <?php } else { ?>
-                                            <span class="badge bg-danger">Keluar</span>
-                                        <?php } ?>
-                                    </td>
-                                    <td>Rp <?php echo number_format($row['jumlah'], 0, ',', '.'); ?></td>
-                                </tr>
-                            <?php } ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Dashboard</h4>
+            <span class="text-muted">Periode: 2026</span>
         </div>
 
-        <script>
-            // 1. Ambil data dari PHP (Gunakan variabel yang sudah ada di atas)
-            // Kita kasih nilai default 0 jika variabel PHP-nya kosong
-            const dataMasuk = <?= $pemasukan ?? 0 ?>;
-            const dataKeluar = <?= $pengeluaran ?? 0 ?>;
-            const sisaSaldo = dataMasuk - dataKeluar;
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body text-center">
+                        <small class="text-muted text-uppercase fw-semibold">Total Saldo</small>
+                        <h1 class="fw-bold mt-3 text-primary">Rp <?php echo number_format($saldo, 0, ',', '.'); ?></h1>
+                    </div>
+                </div>
+            </div>
 
-            // 2. Cek apakah ada data. Kalau 0 semua, kita kasih angka bayangan agar chart muncul
-            // Ini trik supaya pas presentasi chart-nya nggak hilang kalau datanya kosong
-            const chartData = (dataMasuk === 0 && dataKeluar === 0) ? [1, 0] : [sisaSaldo, dataKeluar];
-            const chartLabels = (dataMasuk === 0 && dataKeluar === 0) ? ['Belum ada data', 'Pengeluaran'] : ['Saldo Kas', 'Pengeluaran'];
+            <div class="col-md-8 mb-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <small class="text-muted">Partisipasi Pembayaran Murid</small>
+                        <?php $persen = $total_murid > 0 ? ($sudah_bayar / $total_murid) * 100 : 0; ?>
+                        <div class="progress mt-3" style="height: 20px; border-radius: 10px;">
+                            <div class="progress-bar bg-success" style="width: <?php echo $persen; ?>%"><?php echo round($persen); ?>%</div>
+                        </div>
+                        <p class="mt-2 small text-muted"><?php echo $sud_bayar ?? $sudah_bayar; ?> dari <?php echo $total_murid; ?> murid telah membayar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            // 3. Inisialisasi Chart
-            const ctx = document.getElementById('perbandinganKasChart').getContext('2d');
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0 p-3">
+                    <h5>Grafik Kas</h5>
+                    <div style="height: 300px;">
+                        <canvas id="perbandinganKasChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
-            // Pastikan library Chart.js sudah ter-load
-            if (typeof Chart !== 'undefined') {
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: chartLabels,
-                        datasets: [{
-                            data: chartData,
-                            backgroundColor: [
-                                '#0d6efd', // Biru Primary
-                                '#dc3545' // Merah Danger
-                            ],
-                            hoverOffset: 4,
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 20,
-                                    font: {
-                                        size: 12
-                                    }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.label || '';
-                                        let value = context.raw || 0;
-                                        return label + ': Rp ' + value.toLocaleString('id-ID');
-                                    }
-                                }
-                            }
-                        },
-                        cutout: '70%' // Membuat lubang tengah lebih besar (lebih modern)
-                    }
-                });
-            } else {
-                console.error("Library Chart.js tidak ditemukan! Pastikan koneksi internet stabil.");
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white fw-bold">Transaksi Terakhir</div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Nama</th>
+                                    <th>Kategori</th>
+                                    <th>Nominal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                // Cek apakah query berhasil sebelum fetch
+                                if ($transaksi && mysqli_num_rows($transaksi) > 0) {
+                                    while ($row = mysqli_fetch_assoc($transaksi)) { ?>
+                                        <tr>
+                                            <td><?php echo $row['nama_lengkap']; ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo ($row['jenis'] == 'Masuk' ? 'success' : 'danger'); ?>">
+                                                    <?php echo $row['nama_kategori']; ?>
+                                                </span>
+                                            </td>
+                                            <td>Rp <?php echo number_format($row['nominal'], 0, ',', '.'); ?></td>
+                                        </tr>
+                                    <?php }
+                                } else { ?>
+                                    <tr>
+                                        <td colspan="3" class="text-center p-3 text-muted">Belum ada transaksi</td>
+                                    </tr>
+                                <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('perbandinganKasChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Masuk', 'Keluar'],
+                datasets: [{
+                    data: [<?php echo $pemasukan; ?>, <?php echo $pengeluaran; ?>],
+                    backgroundColor: ['#0d6efd', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
             }
-        </script>
+        });
+    </script>
 </body>
 
 </html>

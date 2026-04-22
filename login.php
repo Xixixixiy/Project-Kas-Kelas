@@ -15,7 +15,7 @@
 
             <h5 class="text-center mb-4">Login Kas Kelas</h5>
 
-            <form method="POST" action="function/proses_login.php">
+            <form method="POST" action="actions/proses_login.php">
                 <div class="mb-3">
                     <input type="text" name="nisn_nip" class="form-control" placeholder="NISN / NIP" required>
                 </div>

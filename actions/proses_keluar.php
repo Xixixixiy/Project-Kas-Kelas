@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../connection/connection.php";
+include "../config/database.php";
 
 // --- 1. AMBIL DATA DARI FORM ---
 $id_kelas    = $_SESSION['id_kelas']; // Kita ambil dari session agar data terkunci pada kelas tersebut
@@ -9,8 +9,20 @@ $keterangan  = $_POST['keterangan'];
 $jenis       = "Keluar"; // Sesuai input hidden atau set manual
 $tgl_today   = date('Y-m-d'); // Mengambil tanggal hari ini otomatis
 
-$bulan_sekarang = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-                    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][(int)date('m') - 1]; // Ambil nama bulan dari array
+$bulan_sekarang = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+][(int)date('m') - 1]; // Ambil nama bulan dari array
 
 // --- 2. VALIDASI BACKEND (Opsional tapi penting) ---
 // Kita cek lagi saldonya di sini buat jaga-jaga kalau user "nakal" bypass Javascript

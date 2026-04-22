@@ -1,100 +1,85 @@
 <?php
 session_start();
-include "../connection/connection.php";
+include "../config/database.php";
 
 // --- 1. VALIDASI AKSES & INPUT ---
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
     header("Location: ../login.php");
     exit;
 }
 
-if (
-    empty($_POST['id_murid']) || empty($_POST['id_kategori']) ||
-    empty($_POST['jumlah']) || empty($_POST['bulan']) ||
-    empty($_POST['minggu']) || empty($_POST['tahun'])
-) {
-    echo "<script>alert('Data tidak lengkap!'); window.history.back();</script>";
-    exit;
+// Debugging: Cek apa saja yang dikirim dari form (Hapus bagian ini jika sudah lancar)
+if (empty($_POST['id_user']) || empty($_POST['id_kategori']) || empty($_POST['minggu'])) {
+    die("Error: Data dari form tidak lengkap. id_user: " . ($_POST['id_user'] ?? 'kosong') . ", minggu: " . ($_POST['minggu'] ?? 'kosong'));
 }
 
 // --- 2. DEKLARASI VARIABEL ---
-$id_user    = $_SESSION['id_user']; // Ambil ID Bendahara dari session
-$id_murid   = $_POST['id_murid'];
-$id_kategori = $_POST['id_kategori'];
-$jenis      = $_POST['jenis']; // 'Masuk'
-$jumlah     = $_POST['jumlah'];
-$keterangan = $_POST['keterangan'] ?? '';
-$bulan      = $_POST['bulan'];
-$minggu     = $_POST['minggu'];
-$tahun      = $_POST['tahun']; // Ambil tahun dari form
-$tanggal    = date('Y-m-d');
+$id_pembayar   = $_POST['id_user'];
+$id_kategori   = $_POST['id_kategori'];
+$nominal_total = $_POST['nominal'];
+$keterangan    = $_POST['keterangan'] ?? 'Pembayaran Kas';
+$bulan         = $_POST['bulan'];
+$minggu_input  = $_POST['minggu'];
+$tahun         = $_POST['tahun'];
+$tanggal       = date('Y-m-d H:i:s');
 
-// --- 3. PENCARIAN DATA KELAS ---
-$get = mysqli_query($conn, "SELECT id_kelas FROM murid WHERE id_murid = '$id_murid'");
-$data = mysqli_fetch_assoc($get);
-if (!$data) {
-    echo "Murid tidak ditemukan!";
-    exit;
-}
-$id_kelas = $data['id_kelas'];
-
-// --- 4. LOGIKA FIFO (First In First Out) OTOMATIS ---
-
-// Ubah M-3 menjadi integer 3
-$target_minggu = (int) str_replace(['M', '-'], '', $minggu);
+// --- 3. LOGIKA FIFO ---
+$target_minggu = (int) str_replace(['M', '-'], '', $minggu_input);
 $berhasil = 0;
 
-// A. Hitung berapa minggu yang belum dibayar dari M-1 sampai target
+// A. Hitung lubang kosong
 $lubang_kosong = 0;
 for ($j = 1; $j <= $target_minggu; $j++) {
     $m_cek = "M-$j";
-    // Cek di tabel transaksi baru (sesuaikan filter bulan DAN tahun)
-    $cek_dulu = mysqli_query($conn, "SELECT id_transaksi FROM transaksi WHERE id_murid = '$id_murid' AND bulan = '$bulan' AND tahun = '$tahun' AND minggu = '$m_cek'");
-    if (mysqli_num_rows($cek_dulu) == 0) {
+    $sql_cek = "SELECT id_transaksi FROM transaksi 
+                WHERE id_user = '$id_pembayar' 
+                AND bulan = '$bulan' 
+                AND tahun = '$tahun' 
+                AND minggu = '$m_cek'";
+    $res_cek = mysqli_query($conn, $sql_cek);
+    if (mysqli_num_rows($res_cek) == 0) {
         $lubang_kosong++;
     }
 }
 
-// B. Bagi nominal total dengan jumlah minggu yang baru akan dibayar
-$nominal_per_minggu = ($lubang_kosong > 0) ? ($jumlah / $lubang_kosong) : 0;
-
+// B. Eksekusi Insert
 if ($target_minggu > 0 && $lubang_kosong > 0) {
+    $nominal_per_minggu = $nominal_total / $lubang_kosong;
+
     for ($i = 1; $i <= $target_minggu; $i++) {
-        $minggu_cek = "M-$i";
+        $minggu_ins = "M-$i";
+        $cek_akhir = mysqli_query($conn, "SELECT id_transaksi FROM transaksi WHERE id_user = '$id_pembayar' AND bulan = '$bulan' AND tahun = '$tahun' AND minggu = '$minggu_ins'");
 
-        // Cek lagi apakah minggu ini sudah ada datanya
-        $cek = mysqli_query($conn, "SELECT id_transaksi FROM transaksi 
-                                     WHERE id_murid = '$id_murid' AND bulan = '$bulan' 
-                                     AND tahun = '$tahun' AND minggu = '$minggu_cek'");
+        if (mysqli_num_rows($cek_akhir) == 0) {
+            // Sesuai Screenshot: id_user, id_kategori, nominal, keterangan, bulan, tahun, minggu, created_at
+            $query_ins = "INSERT INTO transaksi (id_user, id_kategori, nominal, keterangan, bulan, tahun, minggu, created_at)
+                          VALUES ('$id_pembayar', '$id_kategori', '$nominal_per_minggu', '$keterangan', '$bulan', '$tahun', '$minggu_ins', '$tanggal')";
 
-        if (mysqli_num_rows($cek) == 0) {
-            // INSERT ke struktur tabel baru
-            // Kolom: id_user, id_kelas, id_kategori, id_murid, jumlah, tanggal, keterangan, bulan, tahun, minggu
-            $query = "INSERT INTO transaksi (id_user, id_kelas, id_kategori, id_murid, jumlah, tanggal, keterangan, bulan, tahun, minggu)
-                      VALUES ('$id_user', '$id_kelas', '$id_kategori', '$id_murid', '$nominal_per_minggu', '$tanggal', '$keterangan', '$bulan', '$tahun', '$minggu_cek')";
-
-            if (mysqli_query($conn, $query)) {
+            if (mysqli_query($conn, $query_ins)) {
                 $berhasil++;
+            } else {
+                // JIKA ERROR SQL, TAMPILKAN DI SINI
+                die("Gagal Query Insert: " . mysqli_error($conn));
             }
         }
     }
 } else {
-    echo "<script>
-            alert('Tidak ada minggu yang perlu diisi!');
-            window.location='pemasukkan.php';
-          </script>";
+    echo "<script>alert('Minggu ini sudah lunas atau data tidak valid!'); window.location='../transaksi_masuk.php';</script>";
     exit;
 }
 
-// --- 5. FEEDBACK ---
+// DEBUG TEMPORER
+if ($berhasil == 0) {
+    echo "Debug Info:<br>";
+    echo "Target Minggu: $target_minggu <br>";
+    echo "Lubang Kosong: $lubang_kosong <br>";
+    echo "ID Pembayar: $id_pembayar <br>";
+    exit;
+}
+
+// --- 4. FEEDBACK ---
 if ($berhasil > 0) {
-    echo "<script>
-            alert('Berhasil mencatat $berhasil minggu!'); 
-            window.location='pemasukkan.php';
-          </script>";
+    echo "<script>alert('Berhasil mencatat $berhasil minggu!'); window.location='../transaksi_masuk.php';</script>";
 } else {
-    echo "<script>
-            alert('Gagal menyimpan data atau data sudah ada.'); 
-            window.location='pemasukkan.php';
-          </script>";
+    echo "<script>alert('Gagal menyimpan data tanpa pesan error SQL.'); window.history.back();</script>";
 }

@@ -50,60 +50,7 @@ $nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron
 
 <body class="bg-light">
     <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg bg-white shadow-sm">
-        <div class="container-fluid">
-
-            <a class="navbar-brand fw-bold text-primary" href="#">
-                Kas Kelas
-            </a>
-
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-
-                <ul class="navbar-nav me-auto">
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard_bendahara.php">
-                            Dashboard
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="kelolaKas/pemasukkan.php">
-                            Kelola Kas
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link active" href="status_kas.php">
-                            Status Kas
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="detail_kas.php">
-                            Detail Kas
-                        </a>
-                    </li>
-
-                </ul>
-
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted">
-                        <?php echo $_SESSION['nama']; ?>
-                    </span>
-
-                    <a href="logout.php" class="btn btn-outline-danger btn-sm">
-                        Logout
-                    </a>
-                </div>
-
-            </div>
-        </div>
-    </nav>
+    <?php include "layout/navbar.php"; ?>
 
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
