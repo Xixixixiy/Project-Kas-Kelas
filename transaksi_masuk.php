@@ -185,6 +185,8 @@ if ($user_terpilih) {
             });
         });
     </script>
+
+    <?php include 'layout/notifikasi.php'; ?>
 </body>
 
 </html>

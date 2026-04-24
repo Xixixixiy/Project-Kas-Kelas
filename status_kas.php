@@ -1,9 +1,9 @@
 <?php
 session_start();
-include "connection/connection.php";
+include "config/database.php";
 
 // --- 1. VALIDASI AKSES ---
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'bendahara') {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
     header("Location: login.php");
     exit;
 }
@@ -12,19 +12,28 @@ $id_kelas = $_SESSION['id_kelas'];
 
 // --- LOGIKA FILTER BULAN ---
 // Mengambil bulan dari URL atau default ke bulan berjalan
-$bulan_aktif = $_GET['bulan'] ?? date('F');
+// --- DEFINISI LIST BULAN (Untuk Form Dropdown) ---
+$bulan_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+$bulan_aktif = $_GET['bulan'] ?? $bulan_list[(int)date('m') - 1];
 
 // --- ALGORITMA KELUNASAN KELAS ---
 // 1. Hitung total murid di kelas tersebut
-$query_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total FROM murid WHERE id_kelas = '$id_kelas'");
+// $query_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total FROM murid WHERE id_kelas = '$id_kelas'");
+$query_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total 
+FROM user u 
+JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
+WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role = 1");
+
 $total_murid = mysqli_fetch_assoc($query_total_murid)['total'];
 
 // 2. Hitung murid yang sudah bayar 4 kali (M-1 sampai M-4) di bulan tersebut
 $query_lunas_kelas = mysqli_query($conn, "SELECT COUNT(*) as total_lunas FROM (
-    SELECT id_murid FROM transaksi 
-    WHERE bulan = '$bulan_aktif' AND jenis = 'Masuk' 
-    GROUP BY id_murid HAVING COUNT(minggu) >= 4
+    SELECT id_user FROM transaksi 
+    WHERE bulan = '$bulan_aktif' AND id_kategori IN (1,2,3) -- Pastikan hanya kategori 'Masuk' yang dihitung
+    GROUP BY id_user HAVING COUNT(DISTINCT minggu) >= 4
 ) as subquery");
+
 $total_lunas_kelas = mysqli_fetch_assoc($query_lunas_kelas)['total_lunas'];
 
 // 3. Hitung persentase untuk indikator kemajuan (Progress Bar)
@@ -32,10 +41,12 @@ $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 :
 
 // --- AMBIL DAFTAR MURID ---
 // Kita butuh ini agar variabel $query_murid dikenali oleh 'while' di bawah
-$query_murid = mysqli_query($conn, "SELECT * FROM murid WHERE id_kelas = '$id_kelas' AND status = 'Aktif' ORDER BY nama ASC");
+$query_murid = mysqli_query($conn, "SELECT u.id_user, a.nama_anggota
+FROM user u
+JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
+WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role = 1
+ORDER BY a.nama_anggota ASC");
 
-// --- DEFINISI LIST BULAN (Untuk Form Dropdown) ---
-$bulan_list = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 $nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron
 ?>
 
@@ -110,10 +121,11 @@ $nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron
                         <?php
                         $no = 1;
                         while ($row = mysqli_fetch_assoc($query_murid)) :
-                            $id_m = $row['id_murid'];
+                            $id_u = $row['id_user'];
 
                             // Cek status per minggu di database
-                            $cek_bayar = mysqli_query($conn, "SELECT minggu FROM transaksi WHERE id_murid = '$id_m' AND bulan = '$nama_bulan_aktif' AND jenis = 'Masuk'");
+                            $cek_bayar = mysqli_query($conn, "SELECT minggu FROM transaksi 
+                                        WHERE id_user = '$id_u' AND bulan = '$nama_bulan_aktif' AND id_kategori IN (1,2,3)"); // Pastikan hanya kategori 'Masuk' yang dihitung
                             $paid_weeks = [];
                             while ($t = mysqli_fetch_assoc($cek_bayar)) {
                                 $paid_weeks[] = $t['minggu'];
@@ -123,7 +135,7 @@ $nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron
                         ?>
                             <tr>
                                 <td class="ps-4 text-muted"><?= $no++ ?></td>
-                                <td class="fw-bold"><?= $row['nama'] ?></td>
+                                <td class="fw-bold"><?= $row['nama_anggota'] ?></td>
 
                                 <?php for ($i = 1; $i <= 4; $i++) : $m = "M-$i"; ?>
                                     <td class="text-center">

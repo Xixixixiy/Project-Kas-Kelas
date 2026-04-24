@@ -10,7 +10,9 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
 
 // Debugging: Cek apa saja yang dikirim dari form (Hapus bagian ini jika sudah lancar)
 if (empty($_POST['id_user']) || empty($_POST['id_kategori']) || empty($_POST['minggu'])) {
-    die("Error: Data dari form tidak lengkap. id_user: " . ($_POST['id_user'] ?? 'kosong') . ", minggu: " . ($_POST['minggu'] ?? 'kosong'));
+    $_SESSION['error'] = "Data tidak lengkap! Pastikan Anda sudah mengisi semua field yang diperlukan.";
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit;
 }
 
 // --- 2. DEKLARASI VARIABEL ---
