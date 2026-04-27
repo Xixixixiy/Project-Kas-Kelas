@@ -2,9 +2,9 @@
 session_start();
 include "../config/database.php"; // Pastikan path ke config benar
 
-if (isset($_POST['nisn_nip']) && isset($_POST['password'])) {
-    
-    $identitas = mysqli_real_escape_string($conn, $_POST['nisn_nip']);
+if (isset($_POST['nisn_nik']) && isset($_POST['password'])) {
+
+    $identitas = mysqli_real_escape_string($conn, $_POST['nisn_nik']);
     $password  = $_POST['password'];
 
     // QUERY DISESUAIKAN DENGAN STRUKTUR BARU
@@ -32,9 +32,11 @@ if (isset($_POST['nisn_nip']) && isset($_POST['password'])) {
 
                 // Redirect berdasarkan role
                 if ($data['role'] == 'Bendahara') {
-                    header("Location: ../dashboard_bendahara.php");
-                } elseif ($data['role'] == 'wali_kelas') {
-                    header("Location: ../dashboard_wali.php");
+                    header("Location: ../bendahara/dashboard.php");
+                } elseif ($data['role'] == 'Wali Kelas') {
+                    header("Location: ../wali_kelas/dashboard.php");
+                } elseif ($data['role'] == 'Murid') {
+                    header("Location: ../murid/dashboard.php");
                 } else {
                     header("Location: ../index.php"); // Untuk murid/umum
                 }
@@ -50,4 +52,3 @@ if (isset($_POST['nisn_nip']) && isset($_POST['password'])) {
         die("Error Query: " . mysqli_error($conn));
     }
 }
-?>

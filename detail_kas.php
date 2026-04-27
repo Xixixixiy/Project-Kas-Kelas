@@ -11,30 +11,27 @@ if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
 $id_kelas = $_SESSION['id_kelas'];
 
 // --- 2. LOGIKA FILTER BULAN & SALDO ---
-// Untuk daftar bulan di combobox (opsional: bisa hardcode atau ambil dari DB)
-$list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-
 $filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'Semua';
-
-// Buat kondisi tambahan untuk SQL
 $kondisi_bulan = ($filter_bulan != 'Semua') ? " AND t.bulan = '$filter_bulan'" : "";
 
-// A. HITUNG TOTAL SALDO (Hanya untuk kelas ini dan bulan yang dipilih)
+// A. HITUNG TOTAL SALDO
+// Kita join ke tabel user untuk memfilter berdasarkan id_kelas
 // 1. Hitung Pemasukan
-$sql_masuk = "SELECT SUM(nominal) as total FROM transaksi t 
-              LEFT JOIN user u ON t.id_user = u.id_kelas
-              WHERE id_kelas = '$id_kelas' 
-              AND t.id_kategori IN (1,2,3) $kondisi_bulan";
+$sql_masuk = "SELECT SUM(t.nominal) as total FROM transaksi t 
+              JOIN kategori k ON t.id_kategori = k.id_kategori 
+              JOIN user u ON t.id_user = u.id_user 
+              WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Masuk' $kondisi_bulan";
 $q_masuk = mysqli_query($conn, $sql_masuk) or die(mysqli_error($conn));
 
-// 2. Hitung Pengeluaran
-$sql_keluar = "SELECT SUM(nominal) as total FROM transaksi t 
-               LEFT JOIN user u ON t.id_user = u.id_kelas
-               WHERE id_kelas = '$id_kelas' 
-               AND t.id_kategori IN (4,5,6) $kondisi_bulan";
+// 2. Hitung Pengeluaran 
+// (Catatan: Pengeluaran biasanya id_user-nya NULL/milik Bendahara, 
+// maka kita filter berdasarkan id_kelas yang ada di tabel user bendahara tersebut)
+$sql_keluar = "SELECT SUM(t.nominal) as total FROM transaksi t 
+               JOIN kategori k ON t.id_kategori = k.id_kategori 
+               JOIN user u ON t.id_user = u.id_user
+               WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Keluar' $kondisi_bulan";
 $q_keluar = mysqli_query($conn, $sql_keluar) or die(mysqli_error($conn));
 
-// Sekarang baru fetch (pasti aman karena ada 'or die' di atas)
 $res_masuk = mysqli_fetch_assoc($q_masuk);
 $res_keluar = mysqli_fetch_assoc($q_keluar);
 
@@ -43,12 +40,12 @@ $total_keluar = $res_keluar['total'] ?? 0;
 $saldo_akhir = $total_masuk - $total_keluar;
 
 // B. AMBIL SEMUA RIWAYAT TRANSAKSI
-$sql = "SELECT t.*, a.nama_anggota, k.nama_kategori
+$sql = "SELECT t.*, a.nama_anggota, k.nama_kategori, k.jenis
         FROM transaksi t 
-        LEFT JOIN user u ON t.id_user = u.id_user 
+        JOIN user u ON t.id_user = u.id_user 
         LEFT JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
         JOIN kategori k ON t.id_kategori = k.id_kategori
-        WHERE id_kelas = '$id_kelas' 
+        WHERE u.id_kelas = '$id_kelas' 
         $kondisi_bulan
         ORDER BY t.created_at DESC";
 

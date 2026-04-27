@@ -17,7 +17,7 @@
 
             <form method="POST" action="actions/proses_login.php">
                 <div class="mb-3">
-                    <input type="text" name="nisn_nip" class="form-control" placeholder="NISN / NIP" required>
+                    <input type="text" name="nisn_nik" class="form-control" placeholder="NISN / NIK" required>
                 </div>
 
                 <div class="mb-3">

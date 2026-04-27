@@ -23,15 +23,20 @@ $bulan_aktif = $_GET['bulan'] ?? $bulan_list[(int)date('m') - 1];
 $query_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total 
 FROM user u 
 JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
-WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role = 1");
+WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role IN (1, 2, 3)");
 
 $total_murid = mysqli_fetch_assoc($query_total_murid)['total'];
 
 // 2. Hitung murid yang sudah bayar 4 kali (M-1 sampai M-4) di bulan tersebut
 $query_lunas_kelas = mysqli_query($conn, "SELECT COUNT(*) as total_lunas FROM (
-    SELECT id_user FROM transaksi 
-    WHERE bulan = '$bulan_aktif' AND id_kategori IN (1,2,3) -- Pastikan hanya kategori 'Masuk' yang dihitung
-    GROUP BY id_user HAVING COUNT(DISTINCT minggu) >= 4
+    SELECT t.id_user FROM transaksi t
+    JOIN user u ON t.id_user = u.id_user
+    WHERE u.id_kelas = '$id_kelas' 
+    AND u.status = 'Aktif'
+    AND u.id_role IN (1, 2, 3) -- Filter role di sini juga
+    AND t.bulan = '$bulan_aktif' 
+    AND t.id_kategori = 1 
+    GROUP BY t.id_user HAVING COUNT(DISTINCT t.minggu) >= 4
 ) as subquery");
 
 $total_lunas_kelas = mysqli_fetch_assoc($query_lunas_kelas)['total_lunas'];
@@ -44,7 +49,7 @@ $persen_lunas = ($total_murid > 0) ? ($total_lunas_kelas / $total_murid) * 100 :
 $query_murid = mysqli_query($conn, "SELECT u.id_user, a.nama_anggota
 FROM user u
 JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
-WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role = 1
+WHERE u.id_kelas = '$id_kelas' AND u.status = 'Aktif' AND u.id_role IN (1, 2, 3)
 ORDER BY a.nama_anggota ASC");
 
 $nama_bulan_aktif = $bulan_aktif; // Menyamakan variabel agar dropdown sinkron

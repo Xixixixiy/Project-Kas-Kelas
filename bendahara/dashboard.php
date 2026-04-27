@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "config/database.php";
+include "../config/database.php";
 
 // Proteksi
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Bendahara') {
@@ -10,43 +10,43 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Bendahara') {
 
 $id_kelas = $_SESSION['id_kelas'];
 
-// 1. Total Pemasukan & Pengeluaran (Sesuaikan 'nominal' atau 'jumlah' sesuai tabelmu)
-// Di sini saya asumsikan kolomnya bernama 'nominal' sesuai rencana database baru kita
+// 1. Total Pemasukan & Pengeluaran (Filter per Kelas)
 $query_pemasukan = mysqli_query($conn, "
-    SELECT SUM(t.nominal) as total 
+    SELECT SUM(t.nominal) as total
     FROM transaksi t
-    JOIN kategori k ON t.id_kategori = k.id_kategori
     JOIN user u ON t.id_user = u.id_user
+    JOIN kategori k ON t.id_kategori = k.id_kategori
     WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Masuk'
 ");
-$pemasukan = ($query_pemasukan) ? mysqli_fetch_assoc($query_pemasukan)['total'] : 0;
+$pemasukan = mysqli_fetch_assoc($query_pemasukan)['total'] ?? 0;
 
 $query_pengeluaran = mysqli_query($conn, "
     SELECT SUM(t.nominal) as total 
     FROM transaksi t
-    JOIN kategori k ON t.id_kategori = k.id_kategori
     JOIN user u ON t.id_user = u.id_user
+    JOIN kategori k ON t.id_kategori = k.id_kategori
     WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Keluar'
 ");
-$pengeluaran = ($query_pengeluaran) ? mysqli_fetch_assoc($query_pengeluaran)['total'] : 0;
+$pengeluaran = mysqli_fetch_assoc($query_pengeluaran)['total'] ?? 0;
 
 $saldo = $pemasukan - $pengeluaran;
 
-// 2. Statistik Murid
+// 2. Statistik Murid (Partisipasi)
 $q_total_murid = mysqli_query($conn, "SELECT COUNT(*) as total FROM user WHERE id_kelas = '$id_kelas' AND id_role = 1 AND status = 'Aktif'");
-$total_murid = ($q_total_murid) ? mysqli_fetch_assoc($q_total_murid)['total'] : 0;
+$total_murid = mysqli_fetch_assoc($q_total_murid)['total'] ?? 0;
 
+// Menghitung berapa murid yang sudah pernah bayar di tahun berjalan
 $q_sudah_bayar = mysqli_query($conn, "
     SELECT COUNT(DISTINCT t.id_user) as total 
     FROM transaksi t
     JOIN user u ON t.id_user = u.id_user
-    WHERE u.id_kelas = '$id_kelas' AND u.id_role = 1
+    WHERE u.id_kelas = '$id_kelas' AND u.id_role = 1 AND t.tahun = '" . date('Y') . "'
 ");
-$sudah_bayar = ($q_sudah_bayar) ? mysqli_fetch_assoc($q_sudah_bayar)['total'] : 0;
+$sudah_bayar = mysqli_fetch_assoc($q_sudah_bayar)['total'] ?? 0;
 
-// 3. Riwayat Transaksi (Perbaikan baris 125)
+// 3. Riwayat Transaksi (Perhatikan nama kolom: nama_anggota)
 $transaksi = mysqli_query($conn, "
-    SELECT t.*, k.nama_kategori, k.jenis, a.nama_lengkap 
+    SELECT t.*, k.nama_kategori, k.jenis, a.nama_anggota 
     FROM transaksi t
     JOIN kategori k ON t.id_kategori = k.id_kategori
     JOIN user u ON t.id_user = u.id_user
@@ -67,11 +67,11 @@ $transaksi = mysqli_query($conn, "
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="../style/style.css">
 </head>
 
 <body class="bg-light">
-    <?php include "layout/navbar.php"; ?>
+    <?php include "../layout/navbar.php"; ?>
 
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -131,7 +131,7 @@ $transaksi = mysqli_query($conn, "
                                 if ($transaksi && mysqli_num_rows($transaksi) > 0) {
                                     while ($row = mysqli_fetch_assoc($transaksi)) { ?>
                                         <tr>
-                                            <td><?php echo $row['nama_lengkap']; ?></td>
+                                            <td><?php echo $row['nama_anggota']; ?></td>
                                             <td>
                                                 <span class="badge bg-<?php echo ($row['jenis'] == 'Masuk' ? 'success' : 'danger'); ?>">
                                                     <?php echo $row['nama_kategori']; ?>

@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "config/database.php"; // Sesuaikan path config kamu
+include "../config/database.php"; // Sesuaikan path config kamu
 
 // --- 1. VALIDASI AKSES ---
 if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
@@ -32,7 +32,7 @@ $kategori_keluar = mysqli_query($conn, "SELECT * FROM kategori WHERE id_kategori
 </head>
 
 <body class="bg-light">
-    <?php include "layout/navbar.php"; ?>
+    <?php include "../layout/navbar.php"; ?>
 
     <div class="container mt-4">
         <h2 class="fw-bold text-danger">Pengeluaran Kas</h2>
