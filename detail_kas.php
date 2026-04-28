@@ -3,58 +3,54 @@ session_start();
 include "config/database.php";
 
 // --- 1. VALIDASI AKSES ---
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
+if (!isset($_SESSION['role'])) {
     header("Location: login.php");
     exit;
 }
 
 $id_kelas = $_SESSION['id_kelas'];
+$role_user = strtolower(trim($_SESSION['role']));
 
-// --- 2. LOGIKA FILTER BULAN & SALDO ---
+// Daftar bulan untuk dropdown
+$list_bulan = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 $filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'Semua';
 $kondisi_bulan = ($filter_bulan != 'Semua') ? " AND t.bulan = '$filter_bulan'" : "";
 
-// A. HITUNG TOTAL SALDO
-// Kita join ke tabel user untuk memfilter berdasarkan id_kelas
-// 1. Hitung Pemasukan
+// --- 2. LOGIKA SALDO (Tetap tampil untuk semua role sebagai transparansi) ---
 $sql_masuk = "SELECT SUM(t.nominal) as total FROM transaksi t 
               JOIN kategori k ON t.id_kategori = k.id_kategori 
               JOIN user u ON t.id_user = u.id_user 
               WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Masuk' $kondisi_bulan";
-$q_masuk = mysqli_query($conn, $sql_masuk) or die(mysqli_error($conn));
+$q_masuk = mysqli_query($conn, $sql_masuk);
 
-// 2. Hitung Pengeluaran 
-// (Catatan: Pengeluaran biasanya id_user-nya NULL/milik Bendahara, 
-// maka kita filter berdasarkan id_kelas yang ada di tabel user bendahara tersebut)
 $sql_keluar = "SELECT SUM(t.nominal) as total FROM transaksi t 
                JOIN kategori k ON t.id_kategori = k.id_kategori 
                JOIN user u ON t.id_user = u.id_user
                WHERE u.id_kelas = '$id_kelas' AND k.jenis = 'Keluar' $kondisi_bulan";
-$q_keluar = mysqli_query($conn, $sql_keluar) or die(mysqli_error($conn));
+$q_keluar = mysqli_query($conn, $sql_keluar);
 
-$res_masuk = mysqli_fetch_assoc($q_masuk);
-$res_keluar = mysqli_fetch_assoc($q_keluar);
-
-$total_masuk = $res_masuk['total'] ?? 0;
-$total_keluar = $res_keluar['total'] ?? 0;
+$total_masuk = mysqli_fetch_assoc($q_masuk)['total'] ?? 0;
+$total_keluar = mysqli_fetch_assoc($q_keluar)['total'] ?? 0;
 $saldo_akhir = $total_masuk - $total_keluar;
 
-// B. AMBIL SEMUA RIWAYAT TRANSAKSI
-$sql = "SELECT t.*, a.nama_anggota, k.nama_kategori, k.jenis
+// --- 3. LOGIKA FILTER TABEL (Murid hanya lihat Keluar) ---
+$filter_murid = ($role_user == 'murid') ? " AND k.jenis = 'Keluar'" : "";
+
+$sql_riwayat = "SELECT t.*, a.nama_anggota, k.nama_kategori, k.jenis
         FROM transaksi t 
         JOIN user u ON t.id_user = u.id_user 
         LEFT JOIN anggota_kelas a ON u.id_anggota = a.id_anggota
         JOIN kategori k ON t.id_kategori = k.id_kategori
         WHERE u.id_kelas = '$id_kelas' 
-        $kondisi_bulan
+        $kondisi_bulan 
+        $filter_murid
         ORDER BY t.created_at DESC";
 
-$query_riwayat = mysqli_query($conn, $sql) or die(mysqli_error($conn));
-// Tambahkan 'or die' di sini supaya kalau error kamu langsung tau alasannya!
+$query_riwayat = mysqli_query($conn, $sql_riwayat) or die(mysqli_error($conn));
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 
 <head>
     <title>Detail Kas - Riwayat Transaksi</title>
@@ -69,20 +65,18 @@ $query_riwayat = mysqli_query($conn, $sql) or die(mysqli_error($conn));
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h2 class="fw-bold mb-0">Detail Riwayat Kas</h2>
-                <p class="text-muted small">Daftar mutasi uang masuk dan keluar secara kronologis</p>
+                <p class="text-muted small">
+                    <?= ($role_user == 'murid') ? 'Mode Transparansi: Hanya menampilkan pengeluaran kelas' : 'Daftar mutasi uang masuk dan keluar secara kronologis'; ?>
+                </p>
 
-                <div class="mb-3">
-                    <div class="">
-                        <form method="GET" action="">
-                            <select name="bulan" class="form-select shadow-sm border-0" onchange="this.form.submit()">
-                                <option value="Semua" <?= $filter_bulan == 'Semua' ? 'selected' : '' ?>>-- Semua Bulan --</option>
-                                <?php foreach ($list_bulan as $bln) : ?>
-                                    <option value="<?= $bln ?>" <?= $filter_bulan == $bln ? 'selected' : '' ?>><?= $bln ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </form>
-                    </div>
-                </div>
+                <form method="GET" action="" class="mt-2">
+                    <select name="bulan" class="form-select shadow-sm border-0" onchange="this.form.submit()" style="width: 200px;">
+                        <option value="Semua" <?= $filter_bulan == 'Semua' ? 'selected' : '' ?>>-- Semua Bulan --</option>
+                        <?php foreach ($list_bulan as $bln) : ?>
+                            <option value="<?= $bln ?>" <?= $filter_bulan == $bln ? 'selected' : '' ?>><?= $bln ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
             </div>
             <div class="text-end">
                 <div class="p-3 bg-white shadow-sm rounded-4 border-start border-primary border-4">
@@ -100,60 +94,57 @@ $query_riwayat = mysqli_query($conn, $sql) or die(mysqli_error($conn));
                             <th class="ps-4 py-3">Tanggal</th>
                             <th class="py-3">Deskripsi</th>
                             <th class="py-3">Kategori</th>
-                            <th class="py-3 text-end">Masuk (Rp)</th>
+                            <?php if ($role_user != 'murid') : ?>
+                                <th class="py-3 text-end">Masuk (Rp)</th>
+                            <?php endif; ?>
                             <th class="py-3 text-end">Keluar (Rp)</th>
                             <th class="py-3 pe-4 text-center">Aksi</th>
                         </tr>
                     </thead>
-
                     <tbody>
-                        <?php while ($row = mysqli_fetch_assoc($query_riwayat)) :
-                            // LOGIKA DETEKTIF: Tentukan jenis transaksi secara mandiri
-                            // Jika ID Kategori 1, 2, atau 3, maka itu 'Masuk'
-                            $is_masuk = in_array($row['id_kategori'], [1, 2, 3]);
-                            $jenis_label = $is_masuk ? 'Masuk' : 'Keluar';
-                        ?>
-                            <tr>
-                                <td class="ps-4">
-                                    <span class="d-block fw-bold"><?= date('d M Y', strtotime($row['created_at'])) ?></span>
-                                </td>
-
-                                <td>
-                                    <?php if ($is_masuk) : ?>
-                                        <span class="fw-bold"><?= $row['nama_anggota'] ?? 'Umum' ?></span>
-                                        <small class="d-block text-muted">Bulan: <?= $row['bulan'] ?></small>
-                                    <?php else : ?>
-                                        <span class="fw-bold"><?= $row['keterangan'] ?></span>
-                                        <small class="d-block text-muted text-uppercase">Pengeluaran Kelas</small>
+                        <?php if (mysqli_num_rows($query_riwayat) > 0) : ?>
+                            <?php while ($row = mysqli_fetch_assoc($query_riwayat)) :
+                                $is_masuk = ($row['jenis'] == 'Masuk');
+                            ?>
+                                <tr>
+                                    <td class="ps-4">
+                                        <span class="fw-bold"><?= date('d M Y', strtotime($row['created_at'])) ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($is_masuk) : ?>
+                                            <span class="fw-bold"><?= $row['nama_anggota'] ?? 'Umum' ?></span>
+                                            <small class="d-block text-muted small">Bulan: <?= $row['bulan'] ?></small>
+                                        <?php else : ?>
+                                            <span class="fw-bold"><?= $row['keterangan'] ?: $row['nama_kategori'] ?></span>
+                                            <small class="d-block text-muted text-uppercase small">Keperluan Kelas</small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $is_masuk ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> px-2 py-1 mb-1">
+                                            <?= $is_masuk ? 'Pemasukan' : 'Pengeluaran' ?>
+                                        </span>
+                                    </td>
+                                    <?php if ($role_user != 'murid') : ?>
+                                        <td class="text-end fw-bold text-success">
+                                            <?= $is_masuk ? 'Rp ' . number_format($row['nominal'], 0, ',', '.') : '-' ?>
+                                        </td>
                                     <?php endif; ?>
-                                </td>
-
-                                <td>
-                                    <span class="badge <?= $is_masuk ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' ?> px-2 py-1 mb-1 d-inline-block">
-                                        <?= $is_masuk ? 'Pemasukan' : 'Pengeluaran' ?>
-                                    </span>
-                                    <span class="badge bg-primary-subtle text-primary px-2 py-1 d-inline-block">
-                                        <?= $row['nama_kategori'] ?>
-                                    </span>
-                                </td>
-
-                                <td class="text-end fw-bold text-success">
-                                    <?= $is_masuk ? 'Rp ' . number_format($row['nominal'], 0, ',', '.') : '-' ?>
-                                </td>
-
-                                <td class="text-end fw-bold text-danger">
-                                    <?= !$is_masuk ? 'Rp ' . number_format($row['nominal'], 0, ',', '.') : '-' ?>
-                                </td>
-
-                                <td class="text-center pe-4">
-                                    <button class="btn btn-light btn-sm rounded-circle shadow-sm">
-                                        <i class="bi bi-printer text-primary"></i>
-                                    </button>
-                                </td>
+                                    <td class="text-end fw-bold text-danger">
+                                        <?= !$is_masuk ? 'Rp ' . number_format($row['nominal'], 0, ',', '.') : '-' ?>
+                                    </td>
+                                    <td class="text-center pe-4">
+                                        <button class="btn btn-light btn-sm rounded-circle shadow-sm">
+                                            <i class="bi bi-printer text-primary"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else : ?>
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">Tidak ada riwayat transaksi pada periode ini.</td>
                             </tr>
-                        <?php endwhile; ?>
+                        <?php endif; ?>
                     </tbody>
-
                 </table>
             </div>
         </div>

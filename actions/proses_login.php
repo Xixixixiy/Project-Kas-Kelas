@@ -26,15 +26,17 @@ if (isset($_POST['nisn_nik']) && isset($_POST['password'])) {
             // Verifikasi Password (Plain text dulu sesuai permintaanmu)
             if ($password === $data['password']) {
                 $_SESSION['id_user']  = $data['id_user'];
-                $_SESSION['nama']     = $data['nama_lengkap'];
-                $_SESSION['role']     = $data['role'];
+                $_SESSION['nama']     = $data['nama_anggota'];
+                $_SESSION['role']     = strtolower($data['role']);
                 $_SESSION['id_kelas'] = $data['id_kelas'];
 
                 // Redirect berdasarkan role
                 if ($data['role'] == 'Bendahara') {
                     header("Location: ../bendahara/dashboard.php");
-                } elseif ($data['role'] == 'Wali Kelas') {
+                } elseif ($data['role'] == 'Wali_Kelas') {
                     header("Location: ../wali_kelas/dashboard.php");
+                } elseif ($data['role'] == 'Ketua_Kelas') {
+                    header("Location: ../ketua_kelas/dashboard.php");
                 } elseif ($data['role'] == 'Murid') {
                     header("Location: ../murid/dashboard.php");
                 } else {

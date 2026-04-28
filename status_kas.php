@@ -3,7 +3,7 @@ session_start();
 include "config/database.php";
 
 // --- 1. VALIDASI AKSES ---
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara' && strtolower($_SESSION['role']) != 'wali_kelas' && strtolower($_SESSION['role']) != 'ketua_kelas' && strtolower($_SESSION['role']) != 'murid') {
     header("Location: login.php");
     exit;
 }

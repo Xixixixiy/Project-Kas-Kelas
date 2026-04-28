@@ -3,7 +3,7 @@ session_start();
 include "../config/database.php";
 
 // Proteksi
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'wali_kelas' ) {
+if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) !== 'ketua_kelas') {
     header("Location: ../login.php");
     exit;
 }
