@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../config/database.php";
+include __DIR__ . "/../config/database.php";
 
 // --- 1. AMBIL DATA DARI FORM ---
 $id_kelas    = $_SESSION['id_kelas']; // Kita ambil dari session agar data terkunci pada kelas tersebut

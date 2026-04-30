@@ -1,9 +1,9 @@
 <?php
 session_start();
-include "../config/database.php"; // Sesuaikan path config kamu
+include __DIR__ . "/../config/database.php"; // Sesuaikan path config kamu
 
 // --- 1. VALIDASI AKSES ---
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara') {
+if (!isset($_SESSION['role']) || strtolower(trim($_SESSION['role'])) != 'bendahara') {
     header("Location: ../login.php");
     exit;
 }

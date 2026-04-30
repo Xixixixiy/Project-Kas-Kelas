@@ -1,6 +1,6 @@
 <?php
 session_start();
-include "../config/database.php";
+include __DIR__ . "/../config/database.php";
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_user = $_POST['id_user'];

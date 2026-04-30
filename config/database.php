@@ -12,4 +12,3 @@ if (!$conn) {
 
 // Sesuaikan dengan nama folder proyekmu di htdocs
 $base_url = "http://localhost/projectKasKelas/";
-?>

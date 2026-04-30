@@ -1,13 +1,13 @@
 <?php
 session_start();
-include "config/database.php";
+include __DIR__ . "/config/database.php";
 
 // --- 1. VALIDASI AKSES ---
 if (!isset($_SESSION['role'])) {
     header("Location: login.php");
     exit;
 }
-
+    
 $id_kelas = $_SESSION['id_kelas'];
 $role_user = strtolower(trim($_SESSION['role']));
 

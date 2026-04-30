@@ -4,7 +4,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
 // 2. Bersihkan nama role dari session (lowercase & ganti spasi jadi underscore jika perlu)
 // Namun paling aman, kita sesuaikan dengan struktur folder kamu
-$raw_role = isset($_SESSION['role']) ? strtolower($_SESSION['role']) : '';
+$raw_role = isset($_SESSION['role']) ? strtolower(trim($_SESSION['role'])) : '';
 
 // 3. Tentukan folder berdasarkan role secara spesifik
 $role_folder = '';

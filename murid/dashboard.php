@@ -1,9 +1,9 @@
 <?php
 session_start();
-include "../config/database.php";
+include __DIR__ . "/../config/database.php";
 
 // Validasi Akses
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'murid') {
+if (!isset($_SESSION['role']) || strtolower(trim($_SESSION['role'])) != 'murid') {
     header("Location: ../login.php");
     exit;
 }

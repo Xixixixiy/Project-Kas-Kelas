@@ -1,9 +1,9 @@
 <?php
 session_start();
-include "config/database.php";
+include __DIR__ . "/config/database.php";
 
 // --- 1. VALIDASI AKSES ---
-if (!isset($_SESSION['role']) || strtolower($_SESSION['role']) != 'bendahara' && strtolower($_SESSION['role']) != 'wali_kelas' && strtolower($_SESSION['role']) != 'ketua_kelas' && strtolower($_SESSION['role']) != 'murid') {
+if (!isset($_SESSION['role']) || strtolower(trim($_SESSION['role'])) != 'bendahara' && strtolower(trim($_SESSION['role'])) != 'wali_kelas' && strtolower(trim($_SESSION['role'])) != 'ketua_kelas' && strtolower(trim($_SESSION['role'])) != 'murid') {
     header("Location: login.php");
     exit;
 }

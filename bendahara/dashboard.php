@@ -1,10 +1,10 @@
 <?php
 session_start();
-include "../config/database.php";
+include __DIR__ . "/../config/database.php";
 
 // Proteksi
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Bendahara') {
-    header("Location: login.php");
+if (!isset($_SESSION['role']) || strtolower(trim($_SESSION['role'])) !== 'bendahara') {
+    header("Location: ../login.php");
     exit;
 }
 
